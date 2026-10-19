@@ -6,6 +6,7 @@
 #include "AcPilotPawn.h"
 #include "AcLog.h"
 #include "AcSimSubsystem.h"
+#include "AcTerrain.h"
 
 #include "Camera/PlayerCameraManager.h"
 #include "Components/DirectionalLightComponent.h"
@@ -319,6 +320,7 @@ void AAcWeather::Tick(const float DeltaSeconds)
 	}
 	UpdateBolts(WeatherTime(Time), Cam);
 	UpdateLens();
+	UpdateShelters(Cam);
 	// Wet hulls (M_Hull reads MPC_AcWorld.Wetness), as wet as the ground.
 	if (WeatherMpc)
 	{
@@ -493,6 +495,38 @@ void AAcWeather::UpdateLens()
 	const AAcPilotPawn* Pilot = AAcPilotPawn::Find(this);
 	const float Rate = float(FMath::Clamp(Current.rain * CVarRain.GetValueOnGameThread(), 0.0, 1.0));
 	const bool bOn = LensMaterial && Rate > 0.02f && Pilot && Pilot->Driving() && !Pilot->ChaseEye().IsSet();
+	// In the hall (the driven unit sheltered, AcShelter.h) the glass dries in 1.5 s; back out it wets in 0.5 s.
+	// At a corner gun the glass is the feed camera's, outdoors: it stays wet.
+	const bool bDry = AcShelter::DrivenSheltered(this) && Pilot->AtGun() == INDEX_NONE;
+	LensNow = Pilot && Pilot->Driving() ? AcShelter::EaseLens(LensNow, bDry ? 0.0f : Rate, Rate, GetWorld()->GetDeltaSeconds()) : Rate;
 	if (Lens->bEnabled != bOn) Lens->bEnabled = bOn;
-	if (bOn) LensMaterial->SetScalarParameterValue(TEXT("LensRain"), Rate);
+	if (bOn) LensMaterial->SetScalarParameterValue(TEXT("LensRain"), LensNow);
+}
+
+void AAcWeather::UpdateShelters(const FVector& Cam)
+{
+	// Each frame (a walk over the region's structures, microseconds); the
+	// MPC is written only when a box changes (a Citadel done or gone, the
+	// order by the camera).
+	if (!WeatherMpc) return;
+	TArray<AcShelter::FBox> Boxes;
+	if (const UAcSimSubsystem* Sim = UAcSimSubsystem::Get(this); Sim && Sim->IsRunning() && AcShelter::On())
+	{
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		Boxes = AcShelter::Boxes(Sim->Simulation().state.structures, [Terrain](const ac::Vec2 P) { return Terrain ? Terrain->FieldHeight(P) : 0.0; }, Cam);
+	}
+	if (bSheltersWritten && Boxes == ShelterBoxes) return;
+	bSheltersWritten = true;
+	ShelterBoxes = Boxes;
+	FLinearColor Low(0, 0, 0, 0), High(0, 0, 0, 0);
+	for (int32 K = 0; K < AcShelter::Slots; ++K)
+	{
+		const AcShelter::FBox B = K < Boxes.Num() ? Boxes[K] : AcShelter::FBox();
+		UKismetMaterialLibrary::SetVectorParameterValue(this, WeatherMpc, *FString::Printf(TEXT("Shelter%d"), K),
+			FLinearColor(float(B.Centre.X), float(B.Centre.Y), float(B.Half.X), float(B.Half.Y)));
+		Low.Component(K) = float(B.Low);
+		High.Component(K) = float(B.High);
+	}
+	UKismetMaterialLibrary::SetVectorParameterValue(this, WeatherMpc, TEXT("ShelterLow"), Low);
+	UKismetMaterialLibrary::SetVectorParameterValue(this, WeatherMpc, TEXT("ShelterHigh"), High);
 }

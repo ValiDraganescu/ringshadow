@@ -21,6 +21,9 @@
 //   post-process (`M_AcLensRain`) of drops that refract the view.
 // - Wet hulls: `MPC_AcWorld.Wetness`, which M_Hull reads (darker,
 //   glossier, top faces most), as wet as the ground.
+// - No rain indoors (AcShelter.h): the Citadels' shelter boxes in
+//   MPC_AcWorld, where the streaks, the hulls and the ground leave them
+//   dry; the lens dries while the driven unit is sheltered.
 //
 // Console: `ac.Weather` (-1 the schedule; 0 clear, 1 cloudy, 2 rain,
 // 3 storm; fractions blend), `ac.Weather.Rain`, `ac.Weather.Lightning`.
@@ -34,6 +37,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+
+#include "AcShelter.h"
 
 #include "Weather.h"
 
@@ -74,6 +79,10 @@ public:
 	/// from the camera: where the clouds light up.
 	double LastStrikeAzimuth() const { return FlashAzimuth; }
 	double LastStrikeKm() const { return FlashKm; }
+	/// The lens drops' rate now (eased: 0 once the driven unit is sheltered).
+	float LensRate() const { return LensNow; }
+	/// The shelter boxes last written to MPC_AcWorld, nearest the camera first.
+	const TArray<AcShelter::FBox>& Shelters() const { return ShelterBoxes; }
 
 private:
 	void BuildRain();
@@ -81,6 +90,7 @@ private:
 	void UpdateFlash();
 	void UpdateBolts(double T, const FVector& Cam);
 	void UpdateLens();
+	void UpdateShelters(const FVector& Cam);
 	void ApplyHold();
 
 	UPROPERTY(VisibleAnywhere)
@@ -103,6 +113,10 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<class UMaterialParameterCollection> WeatherMpc;
 	float HullWet = -1.0f;
+	/// The shelter boxes written to the MPC (none yet: `bSheltersWritten`).
+	TArray<AcShelter::FBox> ShelterBoxes;
+	bool bSheltersWritten = false;
+	float LensNow = 0.0f;
 
 	/// A strike's drawn bolt: its channel and branches (world cm), how bright.
 	struct FBolt
