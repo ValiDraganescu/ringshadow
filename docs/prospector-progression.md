@@ -122,9 +122,11 @@ brisk and reward going places.
 - **Once per ore.** Ore and MH earn XP only when unloaded, once. Cargo lost
   on a death earns none.
 - **Your own paid buildings.** Welding XP only for a building the pilot paid
-  for, within its building limit (see "Buildings in the MMO"). If demolishing comes, it
-  refunds nothing and takes back the welding XP, so build-and-tear-down earns
-  nothing.
+  for, within its building limit (see "Buildings in the MMO"). Demolishing
+  (C3, docs/guns-and-practice.md "Limits per region and demolish") gives back
+  half the price and leaves the welding XP: every build-and-tear-down loses
+  the other half (a Target Dummy 5 of its 10 ore, a Gatling Gun 63 ore and
+  13 MH), and that is the anti-farm cost.
 - **Repairs** earn only for hp lost to someone or something else, and at most
   the building's welding XP per real day.
 - **One-offs are once per pilot, ever.** They are saved by pilot id. A respec
@@ -369,9 +371,9 @@ floor**. A copy held below the floor is kept and shows "opens at level N".
 | Sentinel | The AA tower: missile pods at the air only, range 7, outranging a Gloamwing's spit (D2); marks from the pilot's wallet at the turret (U, D3) | 10 | 4 | 150 + 100 | on the server (D2, D3) |
 | Garrison | Trains other kinds in the strategy game. Held back: no blueprint in the world while the MMO is Prospector only | | | | held back |
 
-Limits are the realm's, across the world (R1, below): the table's numbers
-count every pilot's buildings together; the Citadel's and the Landing Pad's
-count a region (R3, F2). Overbuild raises the Hab Dome,
+Limits are the realm's, in a region (R1 below; every kind a region's since
+C3, docs/guns-and-practice.md "Limits per region and demolish"): the table's
+numbers count every pilot's buildings together in the pilot's region. Overbuild raises the Hab Dome,
 Derrick and Sentinel limits. The Citadel and the Derrick stay ore only, so the
 first loop costs no MH.
 
@@ -392,10 +394,11 @@ in the world uses every building.
   Lab jobs once the realm has one, and flies the Dropship between any of the
   realm's Landing Pads (F2). Later tasks build on this: the Citadel's tax
   into a realm wallet (C1), defences that guard the realm (D1, D2).
-- **Limits per realm.** A build is refused once the realm has the table's
-  number of that kind, whoever built them: one Citadel a region (R3), four Derricks,
+- **Limits per realm, then per region.** A build is refused once the realm has
+  the table's number of that kind in the pilot's region (since C3; R1 counted
+  the realm across the world), whoever built them: one Citadel, four Derricks,
   three Hab Domes, one Foundry, one Lab, one Spacedock, two Bastions, four
-  Sentinels (`WorldMap::realmCount`, `ProspectorProgress::buildRefusal`).
+  Sentinels (`WorldMap::limitCount`, `ProspectorProgress::buildRefusal`).
   **Overbuild still works**, for the pilot that has it: its ranks raise the
   limit its own builds are checked against (+1 Hab Dome, Derrick and
   Sentinel a rank), so a pilot with Overbuild 2 puts up a fifth and sixth
@@ -789,8 +792,8 @@ On the wire (protocol 8):
 
 On the wire (protocol 12, R1):
 
-- `ProgressMessage::realm`: the realm's buildings across the world by kind,
-  finished or not (the build menu's limits).
+- `ProgressMessage::realm`: the realm's buildings by kind, finished or not
+  (the build menu's limits); since C3 those in the pilot's region.
 - `ProgressMessage::builders`: who built each building of the pilot's region
   (id → callsign), and `callsign`, the pilot's own.
 - `NewsKind::built`: a realm building finished, told to every pilot: `id`

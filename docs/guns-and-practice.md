@@ -367,3 +367,72 @@ confirm` clicks.
 
 The driving-feel worker (tps-feel, wt-1) works in `Pilot.cpp` (the walk),
 `AcPilotChase`, `AcPilotWalls` and `Rules::footprint`: not these files.
+
+## 9. Limits per region and demolish (C3)
+
+The user, 2026-10-19: "there should be no limit on the number of buildings
+I build, or at least, the limit should be per region not per realm", and
+"there is no way of demolishing buildings, so once the limit is reached I am
+toast".
+
+**Limits per region.** Every building limit counts the realm's buildings of
+that kind in the pilot's region, finished or not, never across the realm
+(`Progression::perRegion` is true for every kind; the function stays so a
+kind could be counted across the realm again). The numbers are the old ones,
+now a region's: Derrick 4, Hab Dome 3, Foundry 1, Lab 1, Spacedock 1,
+Bastion 2, Sentinel 4, Gatling Gun 6, Landing Pad 2, Citadel 1, Target Dummy
+12; Overbuild still adds to the Hab Dome, the Derrick and the Sentinel. The
+server counts the region's in every place it counts a limit (the build, the
+frontier's builds, the contracts' build list, the goals, the World message,
+the schema-10 blueprint migration: `WorldMap::limitCount`). The refusal
+says so: "Gatling Gun limit reached: 6 in this region".
+
+**Demolish.** A pilot takes down any building of the realm in its region,
+finished or a scaffold:
+
+- **Driving, first or third person:** the building under the crosshair,
+  within the repair reach (`Simulation::demolishReach`: `workReach` from the
+  building's edge, 1.1 cells and Field welder's reach; the server allows
+  1.5 cells more for the trip), and **E held for 1.5 s**
+  (`Rules::demolishHold`). The cockpit shows "HOLD E · DEMOLISH GATLING GUN ·
+  +62 ORE +12 MH" (no MH part when none comes back) over the act's prompt,
+  and an orange ring filling round the reticle while E is down. Letting go
+  sooner, or looking off the building, does nothing.
+- **The key split:** only E holds to demolish. The click and Space keep
+  every act they have (fire, weld a scaffold, mend, enter a Derrick), so
+  firing at a Target Dummy or welding a scaffold never takes it down. The
+  Citadel's own E acts (the door, a gun station, `AcCitadelAct`) come first
+  where they apply.
+- **Top-down, nothing driven:** a selected building's card has one button,
+  DEMOLISH, held down 1.5 s with the mouse (a bar fills along its foot); it
+  reaches any realm building in the pilot's region.
+- **The refund:** half the build price, `Rules::salvageShare` 0.5 of the
+  world's price, whole units rounded down (`Simulation::salvage`), into the
+  demolishing pilot's own wallet (the region bank that pays for buildings),
+  not the realm wallet. The price is paid in full when a building is
+  placed, so a scaffold gives back the same half as a finished building: a
+  Gatling Gun 62 ore and 12 MH, a Target Dummy 5 ore, a Citadel 200 ore.
+  The welding XP stays: the half price lost on every build-and-tear-down is
+  the anti-farm cost.
+- **Refused:** the realm's last finished Citadel ("The realm's last Citadel
+  stays: a home must remain"); a Citadel with a unit in its hall or doorway
+  ("Someone is inside") or at its guns ("Someone is at its guns"); out of
+  reach ("Too far away"). A frontier pilot repairing or welding it simply
+  stops. Frontier pilots never demolish.
+- **What happens:** the building leaves at once (`Simulation::demolish`:
+  what a fallen building leaves behind is set right, `Simulation::leave`),
+  with `Destroyed` for its shatter to everyone who may know and
+  `Demolished{structure, ore, hydrogen}` to the demolisher alone (its toast,
+  "Target Dummy demolished · +5 ore"). Its builder's credit and its kills
+  go, the next save leaves it out, and the region's count falls, so the
+  next build is allowed.
+- **The wire:** the request `Demolish{structure}`, index 25 of the 5-bit
+  index; the event `Demolished`, case 22; protocol 40 (save schema
+  unchanged).
+
+| Layer | Tests |
+|---|---|
+| core | `limits_areARegions`; `demolish_salvageIsHalfThePriceWhole`, `demolish_leavesAtOnceAndTellsTheNextStep`, `demolish_aScaffoldStopsItsWelder`, `demolish_aCitadelWithSomeoneInItStays` |
+| net | `demolish_protocol_is_40`, `demolish_request_round_trips`, `demolished_event_round_trips`; every event in the all-events round trip |
+| server | `roles_limits_are_a_regions` (six gatlings in one region, a seventh refused there and built in the next); `DemolishTests.cpp`: a finished building's half back and the event to the demolisher only, a scaffold's same half, a seventh gatling after one demolished, the reach and the top-down view, the last Citadel and one with someone inside |
+| game | `Autocraft.Pilot.DemolishHold` (the hold, letting go, looking off, the target, the words); `-AcFlowTest=mmopractice`: twelve dummies, the thirteenth refused, E held on the pilot's own (let go early first), gone, 5 ore back, the toast, a thirteenth built; pictures with `-AcMmoShotsC3` in art/models/guns/c3-build/ |

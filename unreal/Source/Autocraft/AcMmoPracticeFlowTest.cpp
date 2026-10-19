@@ -20,6 +20,15 @@
 //             go, it stands again with its hits cleared. Every move through
 //             the pawn's own hooks (`OnKey`, `OnLookTaken`, the act key, the
 //             look, the move keys).
+//             Between them (C3, docs/guns-and-practice.md "Limits per region
+//             and demolish"): eleven more dummies (dev) make the region's
+//             twelve, the thirteenth refused "in this region"; the pilot walks
+//             to the one it built, the sight on it: "HOLD E · DEMOLISH TARGET
+//             DUMMY · +5 ORE"; E held 0.7 s and let go: nothing; held 1.5 s:
+//             gone, 5 ore back, the toast; then a thirteenth goes up. With
+//             -AcMmoShots=DIR -AcMmoShotsC3: the prompt (c3-demolish-prompt),
+//             the ring part full (c3-demolish-ring) and the toast
+//             (c3-demolish-toast).
 //             With -AcMmoShots=DIR -AcMmoShotsC2: a PNG of the wheel open on
 //             the dummy (c2-wheel.png), the burst into the ground
 //             (c2-ground.png), the rounds in flight (c2-tracers.png), their
@@ -37,6 +46,7 @@
 #include "AcPilotOverlay.h"
 #include "AcPilotPawn.h"
 #include "AcPilotText.h"
+#include "AcProgressHud.h"
 #include "AcSimSubsystem.h"
 
 #include "Defence.h"
@@ -78,6 +88,13 @@ namespace
 		/// The dummy the pilot put down from the wheel.
 		int64 Built = -1;
 		int64 Hits = 0;
+		/// C3: dummies asked for, and the wallet's ore before the demolish.
+		int32 Dummies = 0;
+		/// How many stood when the last was asked for.
+		int32 AskedAt = -1;
+		int64 Ore = 0;
+		/// Where the pilot's own dummy stood (the thirteenth goes there).
+		ac::Vec2 BuiltAt{0, 0};
 		int32 Rounds = 0;
 		int32 Struck = 0;
 		double FiringSince = -1;
@@ -96,12 +113,26 @@ namespace
 	FPractice Practice;
 
 	bool Wanted() { return FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC2")); }
+	bool WantedC3() { return FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC3")); }
 
 	/// -AcMmoShots=DIR with -AcMmoShotsC2: a PNG of the moment `Name` there.
 	bool Picture(const TCHAR* Name)
 	{
 		FString Dir;
 		if (!Wanted() || !FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) || Dir.IsEmpty()) return false;
+		Dir = FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), Dir);
+		IFileManager::Get().MakeDirectory(*Dir, true);
+		const FString Path = FPaths::Combine(Dir, FString(Name) + TEXT(".png"));
+		FScreenshotRequest::RequestScreenshot(Path, /*bShowUI*/ true, /*bAddFilenameSuffix*/ false);
+		UE_LOG(LogAutocraft, Display, TEXT("flowtest: shot %s"), *Path);
+		return true;
+	}
+
+	/// -AcMmoShots=DIR with -AcMmoShotsC3: the demolish's pictures.
+	bool Picture3(const TCHAR* Name)
+	{
+		FString Dir;
+		if (!WantedC3() || !FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) || Dir.IsEmpty()) return false;
 		Dir = FPaths::ConvertRelativePathToFull(FPaths::LaunchDir(), Dir);
 		IFileManager::Get().MakeDirectory(*Dir, true);
 		const FString Path = FPaths::Combine(Dir, FString(Name) + TEXT(".png"));
@@ -299,6 +330,179 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		return;
 	}
 	case 5:
+	{
+		// C3: more dummies here (dev) to the region's twelve, a thirteenth
+		// refused ("in this region"). One dev line at a time (the control
+		// file holds one), each once the last stands, along a line behind the
+		// pilot (the Citadel goes up ahead after, where it always has),
+		// turned a little when the ground runs out.
+		int32 Here = 0;
+		for (const ac::Structure& B : S->state.structures) Here += B.kind == ac::StructureKind::dummy && B.owner == ac::Pilot::player ? 1 : 0;
+		if (!Practice.bAsked)
+		{
+			Practice.bAsked = true;
+			Practice.Dummies = 0;
+			Practice.ShotAt = -1;
+			Practice.AskedAt = -1;
+			Practice.Heading = U->heading;
+		}
+		Pilot->SetTestInput(FVector2D::ZeroVector, Practice.Heading + UE_DOUBLE_PI + 0.5 * (Practice.Dummies / 12));
+		if (Here < 12)
+		{
+			if (Practice.Dummies >= 48)
+			{
+				Check(false, FString::Printf(TEXT("demolish: twelve dummies in the region (%d after %d asked)"), Here, Practice.Dummies));
+				Finish();
+				return;
+			}
+			// The last one seen first (or no ground for it), never one too many.
+			if (!Settle(1.0) || (Here <= Practice.AskedAt && Now - Practice.ShotAt < 2.0)) return;
+			Practice.ShotAt = Now;
+			Practice.AskedAt = Here;
+			if (!Mmo->DevClock(FString::Printf(TEXT("dummy here %d"), 6 + 3 * (Practice.Dummies % 12))))
+			{
+				Check(false, TEXT("demolish: a Target Dummy asked for (dev)"));
+				Finish();
+				return;
+			}
+			Practice.Dummies += 1;
+			return;
+		}
+		if (Now - Practice.ShotAt < 1.0) return;
+		const FString Why = AcProgressHud::BlueprintRefusal(Mmo, ac::StructureKind::dummy);
+		Check(Why.Contains(TEXT("limit reached: 12 in this region")),
+			FString::Printf(TEXT("demolish: at twelve the thirteenth is refused (\"%s\")"), *Why));
+		Advance();
+		return;
+	}
+	case 6:
+	{
+		// To the dummy the pilot built, the sight on it: the prompt.
+		const ac::Structure* D = Structure(Practice.Built);
+		if (!D)
+		{
+			Waited(TEXT("demolish: the pilot's dummy"), 4);
+			return;
+		}
+		Practice.BuiltAt = D->position;
+		const double Yaw = std::atan2(D->position.y - U->position.y, D->position.x - U->position.x);
+		const bool bClose = ac::distance(D->position, U->position) < ac::Rules::radius(D->kind) + 1.0;
+		Pilot->SetTestInput(bClose ? FVector2D::ZeroVector : FVector2D(0, -1), Yaw);
+		if (!bClose || Pilot->DemolishTarget() != Practice.Built)
+		{
+			// Looking down onto the post a little at a time until the sight is on it.
+			if (bClose && Pilot->ViewPitch() > -0.9) Pilot->Look(0.0, 20.0);
+			Waited(FString::Printf(TEXT("demolish: the sight on the dummy within reach (%.1f cells, sight on #%lld)"),
+				ac::distance(D->position, U->position), (long long)Pilot->DemolishTarget()), WalkSeconds);
+			return;
+		}
+		if (!Settle(0.6)) return;
+		const FString Want = TEXT("HOLD E · DEMOLISH TARGET DUMMY · +5 ORE");
+		Check(Info && Info->Demolish && *Info->Demolish == Want,
+			FString::Printf(TEXT("demolish: the prompt reads \"%s\" (\"%s\")"), *Want, Info && Info->Demolish ? **Info->Demolish : TEXT("")));
+		Picture3(TEXT("c3-demolish-prompt"));
+		Practice.Ore = S->state.players[size_t(ac::Pilot::player)].ore;
+		Advance();
+		return;
+	}
+	case 7:
+	{
+		// (A second for the picture's frame first: a hitch would run the hold's clock.)
+		if (!Practice.bPressed)
+		{
+			if (Since() < 1.0) return;
+			// E down: no act (the click's would strike the dummy), the hold starts.
+			Pilot->Press(true, true);
+			Check(Pilot->DemolishFill().IsSet(), TEXT("demolish: E on it starts the hold"));
+			Practice.bPressed = true;
+			Practice.Settled = Now;
+			return;
+		}
+		// Let go at 0.7 s: nothing.
+		if (Now - Practice.Settled < 0.7) return;
+		if (!Practice.bShot)
+		{
+			Practice.bShot = true;
+			const TOptional<double> Fill = Pilot->DemolishFill();
+			Check(Fill && *Fill > 0.3 && *Fill < 0.7, FString::Printf(TEXT("demolish: the ring part full at 0.7 s (%.2f)"), Fill.Get(-1)));
+			Check(Info && Info->DemolishFill.IsSet(), TEXT("demolish: the cockpit draws the ring"));
+			Picture3(TEXT("c3-demolish-ring"));
+			return;
+		}
+		// Let go a few frames after the picture (it is taken on the next frame).
+		if (Pilot->DemolishFill().IsSet())
+		{
+			if (Now - Practice.Settled < 0.9) return;
+			Pilot->Press(false);
+			Check(!Pilot->DemolishFill().IsSet(), TEXT("demolish: letting go ends the hold"));
+			return;
+		}
+		if (Now - Practice.Settled < 2.6) return;
+		Check(Structure(Practice.Built) != nullptr, TEXT("demolish: let go early, the dummy stands"));
+		Pilot->Press(true, true);
+		Advance();
+		return;
+	}
+	case 8:
+	{
+		// Held through: gone, 5 ore back, the toast.
+		if (Structure(Practice.Built))
+		{
+			Waited(TEXT("demolish: the dummy gone after the hold"), ac::Rules::demolishHold + AskSeconds);
+			return;
+		}
+		Pilot->Press(false);
+		// (The shatter's flash gone first, for the picture.)
+		if (!Settle(1.6)) return;
+		const int64 Back = S->state.players[size_t(ac::Pilot::player)].ore - Practice.Ore;
+		Check(Back == 5, FString::Printf(TEXT("demolish: 5 ore back in the wallet (%lld)"), (long long)Back));
+		const UAcProgressHudSubsystem* Hud = UAcProgressHudSubsystem::Get(this);
+		const TArray<FString> Toasts = Hud && Hud->Widget() ? Hud->Widget()->ToastTitles() : TArray<FString>();
+		Check(Toasts.Contains(TEXT("Target Dummy demolished · +5 ore")),
+			FString::Printf(TEXT("demolish: the toast (%s)"), *FString::Join(Toasts, TEXT(" | "))));
+		Picture3(TEXT("c3-demolish-toast"));
+		Advance();
+		return;
+	}
+	case 9:
+	{
+		// Eleven here: the thirteenth (counting all built) goes up.
+		// Stepped back off the spot first (the server's "Step back first").
+		if (!Practice.bAsked && ac::distance(U->position, Practice.BuiltAt) < 2.5)
+		{
+			const ac::Vec2 Off = Practice.BuiltAt - U->position;
+			Pilot->SetTestInput(FVector2D(0, 1), std::atan2(Off.y, Off.x));
+			Waited(TEXT("demolish: a step back from the spot"), WalkSeconds);
+			return;
+		}
+		if (!Practice.bAsked)
+		{
+			Pilot->SetTestInput(FVector2D::ZeroVector, Pilot->Yaw());
+			const FString Why = AcProgressHud::BlueprintRefusal(Mmo, ac::StructureKind::dummy);
+			Check(Why.IsEmpty(), FString::Printf(TEXT("demolish: a dummy may be built again (\"%s\")"), *Why));
+			// Where the demolished one stood: free, and out of the later walks' way.
+			const std::optional<ac::Vec2> At = S->snap(ac::StructureKind::dummy, Practice.BuiltAt);
+			if (At && !S->placementRefusal(ac::StructureKind::dummy, *At) && !Mmo->PadPlateRefusal(ac::StructureKind::dummy, *At))
+				Practice.bAsked = Mmo->Build(ac::StructureKind::dummy, *At);
+			Check(Practice.bAsked, TEXT("demolish: a spot for the thirteenth"));
+			Practice.Dummies = 0;
+			return;
+		}
+		int32 Here = 0;
+		for (const ac::Structure& B : S->state.structures) Here += B.kind == ac::StructureKind::dummy && B.owner == ac::Pilot::player ? 1 : 0;
+		if (Here >= 12)
+		{
+			// Turned back the way it faced, away from the line of dummies,
+			// for the Citadel ahead.
+			Pilot->SetTestInput(FVector2D::ZeroVector, Practice.Heading);
+			if (!Settle(1.0)) return;
+			Check(true, TEXT("demolish: the thirteenth dummy built, twelve in the region again"));
+			Advance();
+		}
+		else Waited(FString::Printf(TEXT("demolish: the thirteenth built (%d here)"), Here), AskSeconds);
+		return;
+	}
+	case 10:
 		// A complete Citadel ahead (dev), its door opened.
 		if (!Practice.bAsked)
 		{
@@ -314,7 +518,7 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		if (Practice.Citadel >= 0 && Since() > 1.0) Advance();
 		else Waited(TEXT("practice: a Citadel with guns by the pilot"), AskSeconds);
 		return;
-	case 6:
+	case 11:
 	{
 		// To the doorstep; the act key opens the door.
 		const ac::Structure* C = Structure(Practice.Citadel);
@@ -343,8 +547,8 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		Waited(FString::Printf(TEXT("practice: the door open (%s)"), *Mmo->HallRefusal()), WalkSeconds);
 		return;
 	}
-	case 7:
-	case 8:
+	case 12:
+	case 13:
 	{
 		// Into the hall through the doorway, then to gun 1's station.
 		const ac::Structure* C = Structure(Practice.Citadel);
@@ -368,7 +572,7 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		Advance();
 		return;
 	}
-	case 9:
+	case 14:
 		// The act key takes the gun.
 		if (!Practice.bPressed) Press();
 		if (U->task != ac::Unit::Task::atGun || Pilot->AtGun() != 0)
@@ -380,7 +584,7 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		Check(true, TEXT("practice: gun 1 manned"));
 		Advance();
 		return;
-	case 10:
+	case 15:
 	{
 		// A Target Dummy `DummyCells` out along the gun's aim (dev), the gun
 		// first turned where the rounds' path that far out is clear of the
@@ -442,7 +646,7 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		else Waited(FString::Printf(TEXT("practice: a standing Target Dummy %.0f cells out"), DummyCells), AskSeconds);
 		return;
 	}
-	case 11:
+	case 16:
 	{
 		// The look onto its plate: the yaw by the mouse, the pitch by the
 		// core's ballistic solve; then the trigger held.
@@ -513,7 +717,7 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		Advance();
 		return;
 	}
-	case 12:
+	case 17:
 	{
 		// Held: rounds fly, strike the dummy, it falls.
 		for (const ac::GameEvent& E : Sim->LastFrame().AllEvents)
@@ -566,7 +770,7 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		Advance();
 		return;
 	}
-	case 13:
+	case 18:
 	{
 		// Let go: it stands again, full, its hits cleared.
 		const ac::Structure* D = Structure(Practice.Dummy);

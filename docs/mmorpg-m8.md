@@ -101,7 +101,7 @@ Two workers at a time (the user, 2026-10-14), on files that don't overlap.
 | # | Task | Needs | Status |
 |---|---|---|---|
 | B1 | Bugs: mining sparks stop when drilling stops; the Prospector moves smoothly (no lag) when its AI drives it and the pilot isn't | | done 0a42c5a |
-| R1 | Realm buildings: every building belongs to the world; any pilot unloads, respawns, lands and is defended by any building; limits per realm; protocol and save migrate; old saves load | | done 1b6611c |
+| R1 | Realm buildings: every building belongs to the world; any pilot unloads, respawns, lands and is defended by any building; limits per realm (per region since C3: docs/guns-and-practice.md, "Limits per region and demolish"); protocol and save migrate; old saves load | | done 1b6611c |
 | C1 | Citadel tax and realm wallet: a share of every unload (start 10%) goes to the realm wallet, a donate action, the realm wallet shown at the Citadel and in the HUD | R1 | done e4611e7 |
 | C2 | Citadel shop: consumables (repair kit, MH canister, shield charge, scanner pulse; first set decided in the task) and every blueprint, from the pilot's wallet, prices rising per blueprint level and per copy bought; blueprints stack and are used up by building; a shop screen | C1 | done f26ab88 |
 | N1 | Bug design and models: docs/creatures.md (kinds: a ground swarmer, a flyer, the brood queen; hp, speed, damage, attraction to POIs, linger, aggro, mining, leaving), models through the model pipeline, sounds offline | | done 0fb7047 (blockout models) |
