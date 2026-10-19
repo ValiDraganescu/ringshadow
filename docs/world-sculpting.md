@@ -352,7 +352,7 @@ Per wall:
 | The Fork | its north and east faces | under the region's rim at the edge, unchanged (nothing shows) |
 | The Fork | the north and east arms | walked lanes: cliffs on their line (the rims' guns), the east arm's straight run bowed; offset segments only away from the paths |
 | The Fork | the south gorge (no path) | a cliff, bent, offset segments, notches |
-| The Drowned Cut (Brine Pans) | the plateau's long north face, west, east and south faces | the rims' rule, a 5-cell slope; the Salt tunnel's mouth carved on through it, so the walkers still find the way out round the mesa |
+| The Drowned Cut (Brine Pans) | the plateau's long north face, west, east and south faces | the rims' rule, a 5-cell slope; the Salt tunnel's cut carried on through the slope, so its mouth stays open to the floor outside |
 | The Drowned Cut | the Salt and Gull arms | walked lanes: cliffs on their line, the Salt arm's three straight runs bowed |
 | The Drowned Cut | the gorge (no path) | a cliff, bent, offset segments, notches |
 | The Roost (Dust Terraces) | the plateau's faces | the rims' rule, a 3-cell slope (it stands a level over the rise) |
