@@ -32,6 +32,14 @@
 //             shows every other frame), and the gun's feed while firing at
 //             pitch 0, -20 and +50 degrees
 //             (c3-feed-0.png, c3-feed-low.png, c3-feed-high.png).
+//             In the hall the shelter (docs/weather.md "Shelter: no rain
+//             indoors"): MPC_AcWorld's first shelter box holds the unit, and
+//             the lens drops' rate is 0 once eased. With -AcMmoShots=DIR
+//             -AcMmoShotsRain (run it in rain by day: -AcMmoWeather=rain
+//             -AcMmoClockHour=11): at the doorway looking in
+//             (c3-doorway-in.png), in the hall by the open door looking out
+//             (c3-hall-out.png), and the hall's floor (c3-floor.png); with
+//             -AcNoShelter the same named -before, the checks left out.
 //
 // Run hidden in a game process (ringshadow-testing, "Flow tests"):
 //   uv run unreal/Tools/hidden_run.py --out DIR --headless -- -AcFlowTest=mmocitadel
@@ -42,9 +50,11 @@
 #include "AcPilotBuild.h"
 #include "AcPilotOverlay.h"
 #include "AcPilotPawn.h"
+#include "AcShelter.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcTerrain.h"
+#include "AcWeather.h"
 
 #include "Defence.h"
 #include "Rules.h"
@@ -55,6 +65,8 @@
 #include "GameFramework/PlayerController.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformTime.h"
+#include "Kismet/KismetMaterialLibrary.h"
+#include "Materials/MaterialParameterCollection.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
@@ -87,6 +99,11 @@ namespace
 		int32 C3 = 0;
 		double C3At = -1;
 		TWeakObjectPtr<ACameraActor> C3Cam;
+		/// In the hall (phase 4): arrived, the shelter checked; the next
+		/// -AcMmoShotsRain picture and when it began.
+		bool bInside = false, bShelterChecked = false;
+		int32 Rain = 0;
+		double RainAt = -1;
 	};
 	/// -AcMmoShotsC3 at the gun: each picture's pitch (degrees), name, and
 	/// whether it is seen from the camera beside the bartizan.
@@ -100,6 +117,8 @@ namespace
 	/// twice, the flash showing every other frame.
 	constexpr FC3Shot C3Firing[] = {{0, TEXT("c3-bartizan-firing"), true}, {0, TEXT("c3-bartizan-firing-2"), true},
 		{0, TEXT("c3-feed-0"), false}, {-20, TEXT("c3-feed-low"), false}, {50, TEXT("c3-feed-high"), false}};
+	/// The floor picture: the look this many points down (0.0026 rad each: about 40 degrees).
+	constexpr double FloorLook = 270.0;
 	/// -AcMmoShotsTps: the wheel's zoom of each picture (then again, placing).
 	constexpr float TpsZooms[] = {0.45f, 1.f, 2.6f};
 	FHall Hall;
@@ -109,7 +128,7 @@ namespace
 	{
 		FString Dir;
 		const bool bWanted = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsTps"))
-			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC3"));
+			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC3")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRain"));
 		if (!bWanted || !FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) || Dir.IsEmpty())
 		{
 			return false;
@@ -236,6 +255,13 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 	const bool bTps = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsTps"));
 	const bool bC3 = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC3"));
 	const bool bPictures = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")) || bTps || bC3;
+	const bool bRainShots = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRain"));
+	// -AcNoShelter: the pictures before the shelter (the rain everywhere).
+	auto RainPicture = [](const TCHAR* Name) { return Picture(*FString::Printf(TEXT("%s%s"), Name, AcShelter::On() ? TEXT("") : TEXT("-before"))); };
+	auto Face = [&](const ac::Vec2 To) {
+		const ac::Vec2 D = C->position + To - U->position;
+		Pilot->SetTestInput(FVector2D::ZeroVector, std::atan2(D.y, D.x));
+	};
 	auto Pictures = [bPictures] { return bPictures; };
 	auto FaceDoor = [&] {
 		const ac::Vec2 D = C->position + ac::Vec2(0, 5.0) - U->position;
@@ -441,22 +467,97 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		else Waited(FString::Printf(TEXT("the door open (%.2f, %s)"), C->door->open, *Mmo->HallRefusal()), AskSeconds);
 		return;
 	case 4:
+	{
 		// Into the hall, through the doorway.
 		if (Since() < 1.0) return;
-		// (Straight in along x 0, through the doorway's middle.)
-		if (WalkTo(InsideDoor, 0.5))
+		// -AcMmoShotsRain: first at the doorway, looking in through the open door.
+		if (bRainShots && Hall.Rain == 0)
 		{
-			if (!Settle(0.8)) return;
-			Check(F.inside(Local) && S->sheltered(*U), FString::Printf(TEXT("in the hall, sheltered (%.1f, %.1f)"), Local.x, Local.y));
-			Check(Prompt == TEXT("E · CLOSE"), FString::Printf(TEXT("inside by the open door: \"%s\""), *Prompt));
-			Advance();
+			if (!WalkTo(Doorstep, 0.6))
+			{
+				Waited(TEXT("at the doorstep for the rain picture"), WalkSeconds);
+				return;
+			}
+			Face(ac::Vec2(0, -3));
+			if (!Settle(2.0)) return;
+			RainPicture(TEXT("c3-doorway-in"));
+			Hall.Rain = 1;
+			Hall.Settled = -1;
+			T.PhaseAt = Now;
+			return;
 		}
-		else
+		// (Straight in along x 0, through the doorway's middle.)
+		if (!Hall.bInside && !WalkTo(InsideDoor, 0.5))
 		{
 			Waited(FString::Printf(TEXT("in the hall (at %.2f, %.2f, the door %.2f%s)"), Local.x, Local.y, C->door->open,
 				C->door->opening ? TEXT(" opening") : TEXT(" shutting")), WalkSeconds);
+			return;
 		}
+		if (!Settle(0.8)) return;
+		if (!Hall.bInside)
+		{
+			Hall.bInside = true;
+			Check(F.inside(Local) && S->sheltered(*U), FString::Printf(TEXT("in the hall, sheltered (%.1f, %.1f)"), Local.x, Local.y));
+			Check(Prompt == TEXT("E · CLOSE"), FString::Printf(TEXT("inside by the open door: \"%s\""), *Prompt));
+		}
+		// The shelter (docs/weather.md): once the lens has had its time to dry.
+		if (!Settle(0.8 + AcShelter::LensDrySeconds + 0.4)) return;
+		if (!Hall.bShelterChecked)
+		{
+			Hall.bShelterChecked = true;
+			const AAcWeather* Weather = AAcWeather::Find(GetWorld());
+			const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+			const float Rain = Weather ? float(Weather->Last().rain) : 0.f;
+			if (!AcShelter::On())
+			{
+				UE_LOG(LogAutocraft, Display, TEXT("flowtest: the shelter off (-AcNoShelter): the rain %.2f, the lens %.2f"), Rain,
+					Weather ? Weather->LensRate() : -1.f);
+			}
+			else
+			{
+				Check(Weather && Weather->LensRate() == 0.f, FString::Printf(TEXT("in the hall the lens dry (rate %.3f, the rain %.2f)"),
+					Weather ? Weather->LensRate() : -1.f, Rain));
+				UMaterialParameterCollection* Mpc =
+					LoadObject<UMaterialParameterCollection>(nullptr, TEXT("/Game/Materials/MPC_AcWorld.MPC_AcWorld"));
+				const FLinearColor Box = Mpc ? UKismetMaterialLibrary::GetVectorParameterValue(this, Mpc, TEXT("Shelter0")) : FLinearColor();
+				const FLinearColor Low = Mpc ? UKismetMaterialLibrary::GetVectorParameterValue(this, Mpc, TEXT("ShelterLow")) : FLinearColor();
+				const FLinearColor High = Mpc ? UKismetMaterialLibrary::GetVectorParameterValue(this, Mpc, TEXT("ShelterHigh")) : FLinearColor();
+				AcShelter::FBox Slot0;
+				Slot0.Centre = FVector2D(Box.R, Box.G);
+				Slot0.Half = FVector2D(Box.B, Box.A);
+				Slot0.Low = Low.R;
+				Slot0.High = High.R;
+				const FVector At = AcSpace::ToWorld(U->position, (Terrain ? Terrain->FieldHeight(C->position) : 0.0) + 1.0);
+				Check(Slot0.Contains(At), FString::Printf(TEXT("MPC_AcWorld's shelter 0 holds the unit (%.0f, %.0f, %.0f in %.0f, %.0f ±%.0f, %.0f; z %.0f to %.0f)"),
+					At.X, At.Y, At.Z, Box.R, Box.G, Box.B, Box.A, Low.R, High.R));
+			}
+		}
+		if (bRainShots && Hall.Rain < 4)
+		{
+			// By the open door looking out, then down at the floor; the look back up after.
+			if (Hall.RainAt < 0)
+			{
+				if (Hall.Rain == 1) Face(ac::Vec2(0, 9));
+				if (Hall.Rain == 2)
+				{
+					Face(ac::Vec2(0, -4));
+					Pilot->Look(0.0, FloorLook);
+				}
+				if (Hall.Rain == 3) Pilot->Look(0.0, -FloorLook);
+				Hall.RainAt = Now;
+				return;
+			}
+			if (Now - Hall.RainAt < 1.5) return;
+			if (Hall.Rain == 1) RainPicture(TEXT("c3-hall-out"));
+			if (Hall.Rain == 2) RainPicture(TEXT("c3-floor"));
+			Hall.Rain += 1;
+			Hall.RainAt = -1;
+			T.PhaseAt = Now;
+			return;
+		}
+		Advance();
 		return;
+	}
 	case 5:
 		// Shut behind it, from inside.
 		if (!Hall.bPressed) Press();

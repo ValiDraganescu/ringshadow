@@ -202,6 +202,9 @@ goes to the middle of that face, clear of the corners the grid holds it off
 (raids pick a Citadel only while a human pilot is in its region) is in
 `WorldBrood.cpp` / `WorldNest.cpp`.
 
+No rain falls in the hall (no streaks, no drops on the visor, a dry floor,
+the rain heard through the walls): docs/weather.md, "Shelter: no rain indoors".
+
 Respawn at a Citadel (server) puts the Prospector in the hall at
 `position + (0, -3)` when the Citadel is complete, else at the door as today.
 

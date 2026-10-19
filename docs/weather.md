@@ -110,6 +110,58 @@ set each frame by `AAcDaylight::Update` from the same `ac::WeatherSample`:
   the takes are `Tools/AudioGen/raw/rain_1.mp3`, `downpour_1.mp3`): light
   rain about 2 dB under the wind, the downpour about 4 dB over it.
 
+## Shelter: no rain indoors
+
+It does not rain in a Citadel's hall (docs/citadel-interior.md): no
+streaks, no drops on the visor, no wet floor or puddles, and the rain is
+heard through the walls. One geometric notion does it all, the **shelter
+box** (`unreal/Source/Autocraft/AcShelter.h`): for every complete,
+living Citadel with the hall in the loaded region, the world-space box of
+its interior (`Rules::footprint(citadel).interior`, 10 × 10 cells;
+Citadels never turn, so it is axis-aligned), from 1 m under its ground
+(the model's walls and floor reach that deep to hide a slope) to the roof
+slab's underside 6 m up, grown 5 cm on every side so the hall's inner
+faces fall inside. The doorway is outside, as for `Simulation::sheltered`.
+
+`AAcWeather` writes up to four boxes, nearest the camera first, into
+`MPC_AcWorld` (`make_resource_materials.make_world_mpc`, added at the end
+of the collection's vectors):
+
+- `Shelter0` … `Shelter3`: centre x, y and half sides x, y (world cm); an
+  unused slot is all 0 and holds nothing.
+- `ShelterLow`, `ShelterHigh`: the four boxes' bottoms and tops (world cm),
+  one per component.
+
+It walks the region's structures every frame (microseconds) and writes the
+collection only when a box changes (a Citadel done or gone, the order by
+the camera). The materials share one test (`shelter_hlsl`).
+
+1. **No streaks indoors** (`M_AcRain`): the vertex shader collapses a
+   streak to a point when its middle or either end lies in a box, so the
+   draw call stays one. Inside the hall no rain falls; from outside
+   through the open door it stops at the doorway; it still falls on the
+   roof and past the walls.
+2. **No drops on the visor** (`M_AcLensRain`'s `LensRain`): while the
+   driven unit is sheltered (the unit, not the camera) the rate eases to 0
+   in 1.5 s, and back up to the rain's in 0.5 s when it steps out
+   (`AcShelter::EaseLens`, tested in `Autocraft.Weather.Shelter.Lens`).
+   At a corner gun the glass is the feed camera's, outdoors: it stays wet.
+3. **Dry floor and walls** (`M_Hull`, `M_Terrain`): a pixel inside a box
+   takes no wetness (and on the ground no puddles or rings): the hall's
+   floor, inner walls and consoles stay dry while the same building's
+   outside gets wet.
+4. **The rain bed muffled**: while the driven unit is sheltered the `rain`
+   and `downpour` beds fall to 40 % and are low-passed at 1.2 kHz, eased
+   over 0.5 s; the wind and the thunder as they are
+   (`FAcAudioRules::Sheltered`, `AcSound::Shelter*`, tested in
+   `Autocraft.Audio.Rules.Shelter`).
+
+The boxes are tested in `Autocraft.Weather.Shelter.Boxes`; the mmocitadel
+flow checks the lens and the collection's first box in the hall, and with
+`-AcMmoShotsRain` takes the pictures (`art/models/citadel/c3-rain/`).
+`ac.Weather.Shelter 0` (or `-AcNoShelter`) turns it all off, for
+comparison shots.
+
 ## Ringshadow sweep
 
 Twice a world day the gas giant's rings throw a band of shadow across the
@@ -527,7 +579,9 @@ tells resampled detail from flicker.
 - `-AcWeatherSeed=N`; `-AcWeatherT=S` samples the weather at S seconds
   (with the seed and a held storm, a still can land on a strike);
   `ac.Weather.Rain` (scale on the rain streaks),
-  `ac.Weather.Wet` (wet ground), `ac.Weather.Lightning` (0/1).
+  `ac.Weather.Wet` (wet ground), `ac.Weather.Lightning` (0/1),
+  `ac.Weather.Shelter` (1: no rain in a Citadel's hall; 0 or
+  `-AcNoShelter`: the rain everywhere, for comparison).
 - The clouds' own: `ac.Daylight.Clouds`, `ac.Daylight.CloudShadows`,
   `ac.Daylight.CloudDensity`; `ac.Daylight.CloudCover` overrides the
   weather's cover; `ac.Daylight.CloudBottom` and `CloudHeight` the layer
