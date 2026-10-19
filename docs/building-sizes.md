@@ -123,6 +123,50 @@ gun, an arm's floor one across. The choice: re-cut the three canyons for
 `Rules::gatlingScale`, `Rules::sentinelScale` (2.4 for 5x5, 1.5 for 3x3, 1
 for 2x2). Until then both are 1.
 
+## Drawn (the game)
+
+- **Every model stands on its footprint.** The renderer stretches each
+  building's model by `AcPose::BuildingScale(kind)`: `Rules::radius` over
+  the radius the model was made for, across, and `Rules::height` over the
+  height it was made for, up. The stretch sits on the placement, so the
+  scaffold, the build ghost (`AAcHologram::Show`), the shadows, the rays,
+  the shatter pieces and the night lamps all follow it. A size change in
+  the core needs no new model. In the strategy game the stretch is one,
+  except for models made at the MMO's size, which are drawn smaller there.
+- **What reads a building's size reads the core's.** The selection ring,
+  the build plate, the map's and the minimap's footprints, the life bar's
+  width and height, the hurt building's smoke and fire, the weld sparks, the
+  shatter, a Ranger's aim at a wall, the HUD's tag sight and the pilot's
+  camera walls (`AcPilotWalls`, the slabs of `Rules::footprint`) all take
+  `Rules::radius` and `Rules::height`. None keeps its own table.
+- **Night lamps** reach over a building as at the size its model was made
+  (`AcLamps.cpp`: the pool and beacon reach x the stretch).
+- **Re-made at the MMO's size** (Geometry Script models, made where a plain
+  stretch would blow up what stands at a Prospector's scale):
+  - the **Landing Pad** (`landing_pad.py`), made at 11x11 and stretched to
+    the Dropship's square. Its corner posts with their lamps and beacon, and
+    each side's lip and hazard band, are parts of their own. The pose keeps
+    them at a Prospector's size at any pad size
+    (`AcBuildingPose::KeepSize`), and the edges stretch along their side
+    only.
+  - the **Foundry** (`foundry.py`, with `scaffold_foundry`), made at 7x7.
+    It is the same building with its door 3 wide and 2.5 tall (a Mule
+    passes), 12 cm hazard bands, floodlights, vents, windows and a 1 m roof
+    railing. A Mule at its door opens it, as a trained vehicle does.
+  - The other kinds (Hab Dome, Garrison, Bastion, Derrick, Spacedock, Lab,
+    Sentinel, Gatling Gun) are the SceneKit exports stretched whole, so
+    their stripes and lamps grow with them (the manager's ruling: the
+    stretched set reads well; re-make one as a script if it looks wrong).
+- **Ground clutter** (pebbles, tufts) is hidden under every building's
+  footprint and comes back once the building is gone
+  (`AAcTerrainScenery::ClearUnderBuildings`). Nothing shows through a
+  Landing Pad's deck.
+- **Pictures:** `-AcFlowTest=mmosize -AcMmoShots=DIR` with the server's dev
+  line `street KIND|all|door` (WorldStreet.cpp). It shoots a street of every
+  kind down from a Citadel's door, then each kind beside the Prospector from
+  a camera framed for its MMO size, and the Foundry's door open on the
+  Mule. Before and after: `art/models/buildings/c5-size/`.
+
 ## Saved worlds
 
 No migration (the manager's ruling): a saved building keeps its position
