@@ -185,6 +185,13 @@ template <class V, class X> void burningFields(V& v, X& x) {
 template <class V> void fields(V& v, const Burning& x) { burningFields<V, const Burning>(v, x); }
 template <class V> void fields(V& v, Burning& x) { burningFields<V, Burning>(v, x); }
 
+template <class V, class X> void haulFields(V& v, X& x) {
+    v(Var{}, x.ore);
+    v(Var{}, x.hydrogen);
+}
+template <class V> void fields(V& v, const Haul& x) { haulFields<V, const Haul>(v, x); }
+template <class V> void fields(V& v, Haul& x) { haulFields<V, Haul>(v, x); }
+
 /// A unit's errand: its case, then the case's fields.
 struct MissionCodec {
     void write(BitWriter& w, const Mission& m) const;
@@ -301,6 +308,8 @@ template <class V, class X> void unitFields(V& v, X& u) {
     v(Opt<Fixed>{kMs}, u.stompedAt);
     v(Opt<Fixed>{kMs}, u.struckAt);
     v(Opt<BugCodec>{}, u.bug);
+    // C4: a Mule's load.
+    v(Opt<Whole<Haul>>{}, u.haul);
 }
 template <class V> void fields(V& v, const Unit& x) { unitFields<V, const Unit>(v, x); }
 template <class V> void fields(V& v, Unit& x) { unitFields<V, Unit>(v, x); }

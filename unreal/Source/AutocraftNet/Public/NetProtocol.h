@@ -623,6 +623,20 @@ struct RequestMessage {
         int64_t structure = 0;
         bool operator==(const Demolish&) const = default;
     };
+    /// C4: buy the Mule at finished realm Foundry `foundry` of the pilot's
+    /// region, paid from the pilot's wallet (`Mule::ore`, `Mule::hydrogen`);
+    /// it rolls out of the door `Mule::rollOut` s later. One a pilot
+    /// (docs/haul-and-ferry.md section 2).
+    struct BuyMule {
+        int64_t foundry = 0;
+        bool operator==(const BuyMule&) const = default;
+    };
+    /// C4: the pilot's Prospector, on foot with a load, puts it all into
+    /// Mule `mule`'s hopper (within `Mule::reach` of it).
+    struct MuleFill {
+        int64_t mule = 0;
+        bool operator==(const MuleFill&) const = default;
+    };
     /// The client's number for it, echoed in the reply.
     uint32_t id = 0;
     /// On the wire its index takes 5 bits (protocol 14; before, 4): Buy is
@@ -630,9 +644,13 @@ struct RequestMessage {
     /// 20; kept for it since 18), Merc 18 (protocol 19), UpgradeTurret 19
     /// (protocol 21), StartProject 20 (protocol 29), CallHunt 21 (protocol 35),
     /// Door 22 and Man 23 (protocol 36), Learn 24 (protocol 37), Demolish 25
-    /// (protocol 40); 5 bits hold 32.
+    /// (protocol 40), BuyMule 26 and MuleFill 27 (protocol 41; the Dropship's
+    /// requests from 28, protocol 42); 5 bits hold 32. C4: Take on a Mule
+    /// climbs aboard it (a world), Take on the pilot's own Prospector or
+    /// HandBack while driving it climbs off.
     std::variant<Take, HandBack, Fly, Build, Pick, Spend, Undo, Respec, Slot, Abandon, Make, Research, Fit, Donate, Buy, Use,
-                 MissionAsk, UpgradeCitadel, Merc, UpgradeTurret, StartProject, CallHunt, Door, Man, Learn, Demolish>
+                 MissionAsk, UpgradeCitadel, Merc, UpgradeTurret, StartProject, CallHunt, Door, Man, Learn, Demolish, BuyMule,
+                 MuleFill>
         what;
     bool operator==(const RequestMessage&) const = default;
 };
@@ -1051,6 +1069,18 @@ struct ProgressMessage {
     /// X2: what happened while the pilot was off line (`AwayReport.h`), on
     /// its first Progress after it joins; nil after (and for a new pilot).
     std::optional<AwayReport> away;
+    /// C4: the pilot's Mule (docs/haul-and-ferry.md section 2): the region
+    /// it is in (a world region id), its unit there (0 while it rolls out),
+    /// the Foundry it rolls out of, and when it is out (world time, `Sky::
+    /// time`; 0 once out). Nil: none (never bought, or destroyed).
+    struct Mule {
+        std::string region;
+        int64_t unit = 0;
+        int64_t foundry = 0;
+        double readyAt = 0;
+        bool operator==(const Mule&) const = default;
+    };
+    std::optional<Mule> mule;
     std::vector<News> news;
     bool operator==(const ProgressMessage&) const = default;
 };

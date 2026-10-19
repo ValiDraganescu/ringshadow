@@ -521,6 +521,7 @@ void writeEvent(BitWriter& w, const GameEvent& e) {
             else if constexpr (std::is_same_v<E, G::DummyDown>) { id(x.id); id(x.hits); }
             else if constexpr (std::is_same_v<E, G::Repaired>) { id(x.structure); id(x.by); id(x.ore); id(x.hydrogen); }
             else if constexpr (std::is_same_v<E, G::Demolished>) { id(x.structure); id(x.ore); id(x.hydrogen); }
+            else if constexpr (std::is_same_v<E, G::Booked>) { id(x.unit); id(x.ore); id(x.hydrogen); pos.write(w, x.at); id(x.taxOre); id(x.taxHydrogen); }
             else static_assert(sizeof(E) == 0, "every event has its encoding");
         },
         e.value);
@@ -590,6 +591,15 @@ bool readEvent(BitReader& r, GameEvent& e) {
         const auto s = id();
         const auto ore = id();
         e = GameEvent(GameEvent::Demolished{s, ore, id()});
+        break;
+    }
+    case 23: {
+        const auto u = id();
+        const auto ore = id();
+        const auto mh = id();
+        const auto a = at();
+        const auto taxOre = id();
+        e = GameEvent(GameEvent::Booked{u, ore, mh, a, taxOre, id()});
         break;
     }
     default: return false;
@@ -957,6 +967,8 @@ std::vector<uint8_t> encode(const RequestMessage& m) {
         w.writeBits(uint64_t(std::clamp<int>(p->gun, -1, 3) + 1), 3);
     if (const auto* p = std::get_if<RequestMessage::Learn>(&m.what)) w.writeBits(uint64_t(p->kind), codec::kStructureKindBits);
     if (const auto* p = std::get_if<RequestMessage::Demolish>(&m.what)) writeSigned(w, p->structure);
+    if (const auto* p = std::get_if<RequestMessage::BuyMule>(&m.what)) writeSigned(w, p->foundry);
+    if (const auto* p = std::get_if<RequestMessage::MuleFill>(&m.what)) writeSigned(w, p->mule);
     return w.bytes();
 }
 
@@ -1119,6 +1131,8 @@ bool decode(const std::vector<uint8_t>& bytes, RequestMessage& m) {
         break;
     }
     case 25: m.what = RequestMessage::Demolish{readSigned(r)}; break;
+    case 26: m.what = RequestMessage::BuyMule{readSigned(r)}; break;
+    case 27: m.what = RequestMessage::MuleFill{readSigned(r)}; break;
     default: return false;
     }
     return r.ok();
@@ -1317,6 +1331,13 @@ std::vector<uint8_t> encode(const ProgressMessage& m) {
             writeString(w, a.where);
             writeSigned(w, a.value);
         }
+    }
+    w.writeBool(m.mule.has_value());
+    if (m.mule) {
+        writeString(w, m.mule->region);
+        writeSigned(w, m.mule->unit);
+        writeSigned(w, m.mule->foundry);
+        writeDouble(w, m.mule->readyAt);
     }
     writeVarint(w, m.news.size());
     for (const auto& n : m.news) {
@@ -1576,6 +1597,14 @@ bool decode(const std::vector<uint8_t>& bytes, ProgressMessage& m) {
             row.value = readSigned(r);
         }
         m.away = std::move(a);
+    }
+    if (r.readBool()) {
+        ProgressMessage::Mule mu;
+        if (!readString(r, mu.region)) return false;
+        mu.unit = readSigned(r);
+        mu.foundry = readSigned(r);
+        mu.readyAt = readDouble(r);
+        m.mule = std::move(mu);
     }
     const uint64_t news = readVarint(r);
     if (news > r.bitsLeft()) return false;

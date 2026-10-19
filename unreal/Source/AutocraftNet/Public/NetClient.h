@@ -112,6 +112,11 @@ public:
     /// C3: demolish a realm building in the pilot's region
     /// (`RequestMessage::Demolish`).
     uint32_t demolish(int64_t structure);
+    /// C4: buy the Mule at realm Foundry `foundry` (`RequestMessage::BuyMule`),
+    /// and put the Prospector's load into Mule `mule` (`RequestMessage::
+    /// MuleFill`). Aboard and off: `take` (the Mule, or the own Prospector).
+    uint32_t buyMule(int64_t foundry);
+    uint32_t muleFill(int64_t mule);
 
     const ClientEndpoint& endpoint() const { return endpoint_; }
     bool connected() const { return endpoint_.state() == ClientEndpoint::State::connected; }

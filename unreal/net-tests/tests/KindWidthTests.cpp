@@ -103,7 +103,7 @@ TEST(every_unit_kind_round_trips_through_the_wire) {
 
 TEST(snapshot_with_the_last_kind_round_trips) {
     const UnitKind last = allCases<UnitKind>().back();
-    EXPECT_TRUE(last == UnitKind::matriarch);
+    EXPECT_TRUE(last == UnitKind::mule);
     Snapshot s;
     Unit u(1, last, 1, Vec2(30.25, -12.5), 2.0, Unit::Task::attacking, 4, 1.25, 5, 17.5);
     u.hp = Rules::hp(last) * 0.75;

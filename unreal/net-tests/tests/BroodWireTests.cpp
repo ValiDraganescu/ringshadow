@@ -61,8 +61,8 @@ TEST(snapshot_carries_a_bug_and_not_its_orders) {
     // 4 bits: 40 of 60 is 10 of 15.
     EXPECT_NEAR(lo->bug->sac, 40.0, 1e-9);
     // A bug costs few bytes past a unit's own: kind, owner, place, hp,
-    // heading, and its 17 bits.
-    EXPECT_TRUE(o.messages[0].size() < 60);
+    // heading, and its 17 bits (C4: a bit more a kind, and the haul's flag).
+    EXPECT_TRUE(o.messages[0].size() < 61);
 }
 
 TEST(snapshot_sky_carries_the_raids_and_roars) {
