@@ -5,6 +5,7 @@
 
 #include "WorldMap.h"
 
+#include "Mule.h"
 #include "Shuttle.h"
 
 #include <algorithm>
@@ -75,6 +76,45 @@ std::string WorldMap::devFerry(const std::string& line) {
         // "dev: ferry: Landing Pad 1 in cold-fork"
         const std::string pad = there.substr(std::string("dev: ferry: ").size(), there.rfind(" in ") - std::string("dev: ferry: ").size());
         return "dev: ferry: pads ready, fly to " + id + " " + pad;
+    }
+    // `ferry mule`: the pilot's Mule (one made as `mule here` makes it, when
+    // it has none) on the grounded Dropship's axis, its middle 3.5 cells
+    // behind the ramp's foot, facing the ship, the Prospector on its perch
+    // driving it; the ramp as it is (the mmoferrymule flow drives it up).
+    if (what == "mule") {
+        if (!p.mule) {
+            const std::string made = devMule("mule here");
+            if (made.rfind("dev: mule here: mule ", 0) != 0) return "dev: ferry mule: " + made;
+        }
+        const auto own = mule(pilot);
+        if (!own || own->first != p.region) return "dev: ferry mule: its Mule is not in this region";
+        Simulation& sim = regions_[p.region]->simulation();
+        const auto mi = sim.unitIndex(own->second);
+        if (!mi) return "dev: ferry mule: no Mule";
+        const Shuttle* ship = nullptr;
+        for (const Shuttle& s : sim.state.shuttles)
+            if (s.grounded() && (!ship || distance(s.position, sim.state.units[size_t(*mi)].position) <
+                                              distance(ship->position, sim.state.units[size_t(*mi)].position)))
+                ship = &s;
+        if (!ship) return "dev: ferry mule: no Dropship on a pad here";
+        if (!drivesMule(pilot, p)) {
+            const auto prospector = p.unit;
+            const auto pi = prospector ? sim.unitIndex(*prospector) : std::nullopt;
+            if (!pi) return "dev: ferry mule: the pilot has no Prospector here";
+            Unit& m = sim.state.units[size_t(*mi)];
+            m.position = ShuttleBay::world(*ship, Vec2(ShuttleBay::rampFoot() - 3.5, 0));
+            m.heading = ship->heading;
+            sim.state.units[size_t(*pi)].position = Mule::perch(m);
+            if (const auto why = take(pilot, own->second)) return "dev: ferry mule: " + *why;
+        }
+        // Driving it: both where they belong, the rider on its perch.
+        const auto i = sim.unitIndex(own->second);
+        Unit& m = sim.state.units[size_t(*i)];
+        m.position = ShuttleBay::world(*ship, Vec2(ShuttleBay::rampFoot() - 3.5, 0));
+        m.heading = ship->heading;
+        if (p.unit)
+            if (const auto ri = sim.unitIndex(*p.unit)) sim.state.units[size_t(*ri)].position = Mule::perch(m);
+        return "dev: ferry: the Mule behind the ramp, driven, mule " + std::to_string(own->second);
     }
     if (what == "call") {
         const auto why = callShuttle(pilot);
@@ -150,7 +190,7 @@ std::string WorldMap::devFerry(const std::string& line) {
             if (o.building == *id && o.region == r) return "dev: ferry: " + o.name + " in " + world_->regions[r].file.id;
         return "dev: ferry: a Landing Pad in " + world_->regions[r].file.id;
     }
-    return "dev: ferry: pad [here|REGION [unseen]] | seen | go REGION | mh N | pads | call | board | ramp open|shut";
+    return "dev: ferry: pad [here|REGION [unseen]] | seen | go REGION | mh N | pads | call | board | ramp open|shut | mule";
 }
 
 } // namespace ac::server

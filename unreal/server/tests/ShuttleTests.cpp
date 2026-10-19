@@ -205,3 +205,48 @@ TEST(shuttle_mule_rides_with_its_driver) {
     EXPECT_TRUE(distance(ShuttleBay::local(down, m->position), was) < 0.1);
     EXPECT_TRUE(w.region(first().start).simulation().state.unit(mule) == std::nullopt);
 }
+
+/// `ferry mule` (the mmoferrymule flow's rig): the pilot's Mule on the
+/// grounded ship's axis behind the ramp, facing it, driven; driven straight
+/// on, it goes up the ramp into the bay.
+TEST(shuttle_dev_ferry_mule_drives_up_the_ramp) {
+    WorldMap w(first(), params());
+    rig(w);
+    ASSERT_TRUE(!w.callShuttle(a));
+    run(w, Ferry::descend + ShuttleBay::rampSeconds + 0.2);
+    const std::string said = w.devFerry("ferry mule");
+    std::printf("  %s\n", said.c_str());
+    ASSERT_TRUE(said.rfind("dev: ferry: the Mule behind the ramp", 0) == 0);
+    ASSERT_TRUE(w.drivesMule(a));
+    const Shuttle* s = nearestShip(w, a);
+    ASSERT_TRUE(s != nullptr);
+    const Vec2 l = ShuttleBay::local(*s, drivenBy(w, a)->position);
+    EXPECT_NEAR(l.x, ShuttleBay::rampFoot() - 3.5, 1e-6);
+    EXPECT_NEAR(l.y, 0, 1e-6);
+    // Straight on, up the ramp, until its tail is in (its middle past
+    // −0.9; the ramp button is in reach until its middle passes 0.74).
+    const int64_t mule = *w.regionOf(a)->driving(a);
+    const double heading = s->heading;
+    for (int i = 0; i < 60 * 12 && ShuttleBay::local(*nearestShip(w, a), drivenBy(w, a)->position).x < -0.6; i++) {
+        PilotInput in;
+        in.tick = w.regionOf(a)->lastInputTick(a) + 1;
+        in.visit = w.visit(a);
+        in.heading = heading;
+        in.walk = Vec2(1, 0);
+        w.input(a, in);
+        w.step();
+    }
+    for (int i = 0; i < 40; i++) {
+        PilotInput in;
+        in.tick = w.regionOf(a)->lastInputTick(a) + 1;
+        in.visit = w.visit(a);
+        in.heading = heading;
+        w.input(a, in);
+        w.step();
+    }
+    ASSERT_TRUE(*w.regionOf(a)->driving(a) == mule);
+    const Vec2 in = ShuttleBay::local(*nearestShip(w, a), drivenBy(w, a)->position);
+    std::printf("  stopped at %.2f %.2f\n", in.x, in.y);
+    EXPECT_TRUE(ShuttleBay::inBay(in) && in.x > -1.0 && in.x < 0.74);
+    EXPECT_TRUE(!w.shuttleRamp(a, false));
+}

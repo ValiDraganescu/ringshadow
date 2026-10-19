@@ -253,7 +253,9 @@ server presses the buttons for them; booked, they fly as before.
 **Dev lines** (`ferry ...`): `pads` (a Landing Pad under the pilot, one in a
 region next door, seen, 200 MH; the reply names the target), `call`,
 `board` (a ship on the pad at once, shut, the Prospector at its take-off
-button), `ramp open|shut`.
+button), `ramp open|shut`, `mule` (the pilot's Mule, made if it has none,
+on the grounded ship's axis 3.5 cells behind the ramp's foot, facing it,
+driven).
 
 **Tests.** Core: ShuttleTests.cpp (the shape, the landing, the walk up the
 ramp, the ramp's and the take-off's refusals, the riders untouchable, a hop
