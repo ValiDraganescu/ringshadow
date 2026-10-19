@@ -161,6 +161,52 @@ struct Zone {
     bool operator==(const Zone&) const = default;
 };
 
+/// A landform (docs/world-sculpting.md, "Landforms"): what the land does
+/// there, said in words; `expand` draws its shape (an outline bent by
+/// noise and bitten by erosion, never a straight line), its height and the
+/// rocks round its foot, the same for the same seed.
+enum class LandformKind : uint8_t { butte, mesa, spires, escarpment, shelf, swell, wash, boulders };
+enum class LandformSize : uint8_t { small, medium, large };
+
+struct Landform {
+    LandformKind kind = LandformKind::butte;
+    /// Its middle (butte, mesa, spires, shelf, swell, boulders).
+    std::optional<Vec2> at;
+    /// Its line (escarpment: the cliff's foot; wash: its bed), ≥ 2 points.
+    std::vector<Vec2> along;
+    LandformSize size = LandformSize::medium;
+    /// Levels (0: the kind's own: a butte 3-4, a mesa 2, spires 3-5, an
+    /// escarpment, shelf or swell 1).
+    int64_t height = 0;
+    /// Spires, boulders: how many (0: by size).
+    int64_t count = 0;
+    /// Escarpment: the low side, the way its cliff faces (default south).
+    std::optional<Edge> face;
+    int64_t seed = 0;
+    bool operator==(const Landform&) const = default;
+};
+
+/// A region's land as a style and its landforms (docs/world-sculpting.md):
+/// the style places its own forms where the rules leave room, after the
+/// file's own.
+enum class SculptStyle : uint8_t { none, openDesert, badlands, mesaCountry };
+
+struct Sculpt {
+    SculptStyle style = SculptStyle::none;
+    int64_t seed = 1;
+    std::vector<Landform> forms;
+    /// More ground no landform may take (besides the rules' own: each pad's
+    /// field of fire, the places, veins, wells, nest, passages, ramps and
+    /// canyon zones).
+    struct Keep {
+        Vec2 at;
+        double radius = 0;
+        bool operator==(const Keep&) const = default;
+    };
+    std::vector<Keep> keep;
+    bool operator==(const Sculpt&) const = default;
+};
+
 struct RegionFile {
     std::string id;
     std::string name;
@@ -191,6 +237,8 @@ struct RegionFile {
     std::array<std::vector<Span>, 4> openings;
     /// Canyon zones (Z1).
     std::vector<Zone> zones;
+    /// The land's style and landforms (nil: only the layers above).
+    std::optional<Sculpt> sculpt;
 
     /// Width and depth, cells.
     Vec2 extent() const;
@@ -221,6 +269,19 @@ AUTOCRAFTCORE_API std::string write(const RegionFile& file);
 
 /// A file with only the base.
 AUTOCRAFTCORE_API RegionFile starter(std::string id, MapStyle style, uint64_t seed, MapSize size);
+
+/// The file with its `sculpt` drawn into its plain layers: each landform
+/// (the file's, then the style's own) as height edits, border islands and
+/// rocks (doodads). `build` and `validate` read a file through it; a file
+/// with no `sculpt` comes back as it is. `notes`: what the style placed and
+/// what it found no room for.
+AUTOCRAFTCORE_API RegionFile expand(const RegionFile& file, std::vector<std::string>* notes = nullptr);
+/// The rules the file's own landforms break: in a pad's field of fire, on
+/// a place, a vein, a well, the nest, a passage's lane, a ramp's end or a
+/// canyon zone, or out of the land.
+AUTOCRAFTCORE_API std::vector<Problem> sculptProblems(const RegionFile& file);
+/// The rules' clearances, cells past a landform's own size.
+constexpr double fieldOfFire = 30.0;
 
 /// The highest level a height edit reaches (one level is 2.4 high).
 constexpr int64_t maxLevel = 4;
@@ -345,6 +406,15 @@ inline constexpr const char* padPlateRefusal = "Too close to a landing pad";
 } // namespace ac::region
 
 namespace ac {
+template <> struct EnumInfo<region::LandformKind> {
+    static constexpr std::array<std::string_view, 8> names{"butte", "mesa", "spires", "escarpment", "shelf", "swell", "wash", "boulders"};
+};
+template <> struct EnumInfo<region::LandformSize> {
+    static constexpr std::array<std::string_view, 3> names{"small", "medium", "large"};
+};
+template <> struct EnumInfo<region::SculptStyle> {
+    static constexpr std::array<std::string_view, 4> names{"none", "open-desert", "badlands", "mesa-country"};
+};
 template <> struct EnumInfo<region::Ground> {
     static constexpr std::array<std::string_view, 8> names{"plain", "rust", "salt", "ash", "glass", "slag", "frost", "ochre"};
 };

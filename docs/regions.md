@@ -22,6 +22,8 @@ autocraft-region preview FILE -o OUT.png [--scale PX]
 autocraft-region edges FILE [--depth D]   the ground's level along each edge
 autocraft-region levels FILE [--bare]     the ground a cell at a time (# cliff, o rock)
 autocraft-region format FILE              rewrite it in the tool's layout
+autocraft-region view FILE -o OUT.png [--from AZ|n|e|s|w] [--pitch DEG] [--at X,Z]
+                 [--dist CELLS] [--fov DEG] [--size WxH] [--eye]   the ground at an angle
 ```
 
 The preview: north up, a labelled grid every 8 cells, height as colour bands
@@ -30,6 +32,46 @@ green dots, ore violet, MH wells silver, pads yellow rings, spawns green
 diamonds, blueprint sites gold squares (named, with kind and blueprint), openings cyan
 (their floor level as L0…L4), the border's outline dotted, each problem a red ring numbered as in the list
 below the map.
+
+## Seeing a region
+
+The preview flattens the ground: a cliff is a red line, a wall a pale band.
+Two more ways to look show it the way a player meets it.
+
+`autocraft-region view` renders the region's ground at an angle in software
+(`unreal/server/region/View.cpp`, under a second at 1280x720). It ray-marches
+the built `TerrainField`, with the scenery past the bounds from
+`borderHeight`. A low sun from the west-north-west (35° up) lights it, with
+cast shadows and haze toward the sky. The ground takes its `ground`
+palette, a little lighter each level up. Cliffs (steeper than a machine
+climbs) are darker rock, the border's walls grey, its islands warm rock.
+Rocks, boulders and spires are bumps and cones, other solid doodads violet
+bumps, ore violet mounds and wells silver discs. Pads are yellow rings and
+spawn points green, both named; sites are gold squares. The preview's
+8-cell grid is drawn faintly on the region, so a spot can be found in both.
+
+- Default: an overview from the south, 35° down, framing the whole region.
+  `--from` is the side the camera stands on (n, e, s, w or compass degrees),
+  `--pitch` how far down it looks, `--at X,Z` (region cells) what it looks
+  at, `--dist` how far off it stands, in cells.
+- `--eye`: a pilot's eye, 1.3 cells over the ground at `--at` (default: the
+  first pad), looking toward `--from`, 2° down, a 75° field of view. The pad
+  it stands on is left unpainted.
+
+`uv run unreal/Tools/regions/critic.py REGION [--ref IMAGE] [--shots DIR] -o SHEET.jpg`
+puts everything about a region on one contact sheet, each picture labelled:
+
+- the top-down preview;
+- the four oblique views;
+- two eye views from the first pad, toward its two most open directions
+  (the lowest skyline within 60 cells on `levels`);
+- the brief's reference image (`--ref`);
+- the terrain lab's in-game stills, `DIR/<region>/lab/*.png` as
+  `-AcTerrainLabShots` writes them (`--shots`; it never starts the game);
+- under them, the text of `autocraft-region build`.
+
+REGION is an id or a file's path. The pictures go to
+`unreal/server/build/critic/<id>/`.
 
 ## Coordinates
 
@@ -350,6 +392,40 @@ where they were; plants and debris on the rock go. It validates each try
 and keeps, of 40 seeds, the valid one with the shortest straight wall.
 Rerunning it on a shaped file keeps what is already inside; edit the
 outline by hand from there if a place needs it.
+
+## sculpt
+
+The land in words (docs/world-sculpting.md, "Sculpting for an AI"): a
+style and landforms, drawn into the layers above when the region is built
+(`autocraft-region expand FILE` prints the file as drawn). Write the land
+this way, not as polygons: a hand-drawn polygon, a circle or a rock set by
+hand reads as placed.
+
+```json
+"sculpt": {
+  "style": "open-desert",            // none | open-desert | badlands | mesa-country
+  "seed": 1,
+  "forms": [
+    {"form": "escarpment", "along": [[100, 22], [118, 17], [136, 24]], "face": "south", "height": 2},
+    {"form": "butte", "at": [30, 74], "size": "medium", "height": 4},
+    {"form": "spires", "at": [114, 62], "size": "small"}
+  ],
+  "keep": [{"at": [90, 60], "radius": 10}]
+}
+```
+
+- `form`: butte, mesa, spires (`at`); escarpment, wash (`along`, ≥ 2
+  points; an escarpment's `face` is its low side, default south, and it
+  gets a ramp up); shelf, swell, boulders (`at`).
+- `size`: small, medium (default), large; `height` levels (1-6), `count`
+  (spires, boulders), `seed`.
+- The rules (validate names a breach as `sculpt.forms[i]`): out of each
+  pad's field of fire (30 cells; a swell, shelf, wash or boulder field only
+  out of the base's 16), off the places, veins, wells, nest, landmarks,
+  ramps' ends, passages' lanes and canyon zones, the rock inside the land.
+  `keep` adds ground of the file's own.
+- The style fills in after the file's forms where there is room, a size
+  smaller when crowded; `build` says what it placed.
 
 ## zones
 

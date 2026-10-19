@@ -8,9 +8,14 @@
 //   autocraft-region edges FILE [--depth D]
 //   autocraft-region levels FILE [--bare]
 //   autocraft-region format FILE
+//   autocraft-region expand FILE
+//   autocraft-region view FILE -o OUT.png [--from AZ|n|e|s|w] [--pitch DEG] [--at X,Z] [--dist CELLS]
+//                         [--fov DEG] [--size WxH] [--eye]
 
 #include "Preview.h"
+#include "View.h"
 
+#include "Brood.h"
 #include "NavGrid.h"
 #include "RegionFile.h"
 #include "TerrainField.h"
@@ -44,6 +49,12 @@ int usage() {
                  "  autocraft-region levels FILE [--bare]         the ground's level a cell at a time (# a cliff, o rock\n"
                  "                                                in the way), --bare without the border's walls\n"
                  "  autocraft-region format FILE                  rewrite it in the tool's own layout\n"
+                 "  autocraft-region expand FILE                  the file with its landforms drawn in (sculpt)\n"
+                 "  autocraft-region view FILE -o OUT.png [--from AZ|n|e|s|w] [--pitch DEG] [--at X,Z] [--dist CELLS]\n"
+                 "                        [--fov DEG] [--size WxH] [--eye]\n"
+                 "                                                the ground at an angle (default: from the south, pitch 35,\n"
+                 "                                                the whole region); --eye: a pilot's eye at --at (default the\n"
+                 "                                                first pad) looking toward --from\n"
                  "Format: docs/regions.md\n");
     return 2;
 }
@@ -175,9 +186,54 @@ int summary(const std::string& path) {
                 closed += std::sqrt(dx * dx + dz * dz) > NavGrid::maxSlope || !cell || !nav.free(*cell) ? 1 : 0;
             }
         std::printf("wall and cliff: %.0f%% of the region\n", 100.0 * static_cast<double>(closed) / static_cast<double>(cells));
-        const auto islands = file->border ? file->border->islandKinds : std::vector<IslandKind>{};
+        std::vector<std::string> notes;
+        const RegionFile ex = expand(*file, &notes);
+        const auto islands = ex.border ? ex.border->islandKinds : std::vector<IslandKind>{};
         const auto standing = std::count_if(islands.begin(), islands.end(), [](IslandKind k) { return k != IslandKind::wall; });
         std::printf("free-standing rock: %ld\n", static_cast<long>(standing));
+        if (file->sculpt) {
+            std::printf("landforms: %zu the file's own\n", file->sculpt->forms.size());
+            for (const std::string& n : notes) std::printf("  style: %s\n", n.c_str());
+        }
+        // A hand-drawn tell: a cliff that runs straight for 8 cells or more
+        // (the cliff-sided raises, lowers and flats, the islands).
+        {
+            int64_t straight = 0;
+            const auto runs = [&straight](const std::vector<Vec2>& poly) {
+                for (size_t i = 0; i < poly.size(); i++)
+                    if (distance(poly[i], poly[(i + 1) % poly.size()]) >= 8) straight++;
+            };
+            for (const Edit& e : ex.height)
+                if ((e.op == HeightEdit::Kind::raise || e.op == HeightEdit::Kind::lower || e.op == HeightEdit::Kind::flatten) && e.slope < 2 &&
+                    e.area.shape == Area::Shape::polygon)
+                    runs(e.area.points);
+            if (ex.border)
+                for (const auto& is : ex.border->islands) runs(is);
+            std::printf("straight cliff runs (8 cells or more): %lld\n", static_cast<long long>(straight));
+        }
+        // The raid's way in: a walker's path from each passage and the nest
+        // to each pad, and the time at a shardling's march.
+        {
+            const double pace = Brood::marchSpeed(UnitKind::shardling);
+            std::vector<std::pair<std::string, Vec2>> from;
+            for (size_t e = 0; e < 4; e++)
+                for (const Span& sp : file->openings[e])
+                    from.push_back({std::string(edgeName(static_cast<Edge>(e))) + " passage",
+                                    built.ground(built.edgePoint(static_cast<Edge>(e), (sp.from + sp.to) / 2, 3))});
+            if (built.nest) from.push_back({"the nest", *built.nest});
+            for (const Place& pad : built.pads)
+                for (const auto& [name, at] : from) {
+                    const auto way = nav.path(at, pad.at, padReach + 2);
+                    double len = 0;
+                    if (way)
+                        for (size_t i = 0; i + 1 < way->size(); i++) len += distance((*way)[i], (*way)[i + 1]);
+                    if (way)
+                        std::printf("raid: %s to pad \"%s\": %.0f cells, %.0f s at a shardling's march\n", name.c_str(), pad.name.c_str(),
+                                    len + distance(at, way->front()), (len + distance(at, way->front())) / pace);
+                    else
+                        std::printf("raid: %s to pad \"%s\": no way\n", name.c_str(), pad.name.c_str());
+                }
+        }
         // From 1.3 cells over each pad, 64 directions: open where nothing
         // within 60 cells stands over 3 degrees above the eye (a ray that
         // leaves the region first is open: the neighbour's ground).
@@ -302,6 +358,18 @@ int levels(const std::string& path, const std::vector<std::string>& args) {
     return 0;
 }
 
+/// The file with its landforms drawn in (`expand`), to stdout; what the
+/// style placed to stderr.
+int expanded(const std::string& path) {
+    const auto file = load(path);
+    if (!file) return 1;
+    std::vector<std::string> notes;
+    const RegionFile ex = expand(*file, &notes);
+    for (const std::string& n : notes) std::fprintf(stderr, "style: %s\n", n.c_str());
+    std::fputs(write(ex).c_str(), stdout);
+    return 0;
+}
+
 int format(const std::string& path) {
     const auto file = load(path);
     if (!file) return 1;
@@ -309,6 +377,23 @@ int format(const std::string& path) {
     f << write(*file);
     if (!f) { std::fprintf(stderr, "cannot write %s\n", path.c_str()); return 1; }
     std::printf("wrote %s\n", path.c_str());
+    return 0;
+}
+
+/// `view`: the ground at an angle (View.h).
+int look(const std::string& path, const std::vector<std::string>& args) {
+    const auto out = option(args, "-o");
+    std::string error;
+    const auto options = regiontool::viewOptions(args, error);
+    if (!out || !options) {
+        if (!error.empty()) std::fprintf(stderr, "%s\n", error.c_str());
+        return usage();
+    }
+    const auto file = load(path);
+    if (!file) return 1;
+    const regiontool::Image image = regiontool::view(*file, build(*file), *options);
+    if (!regiontool::writePng(image, *out)) { std::fprintf(stderr, "cannot write %s\n", out->c_str()); return 1; }
+    std::printf("wrote %s (%dx%d)\n", out->c_str(), image.width, image.height);
     return 0;
 }
 
@@ -326,5 +411,7 @@ int main(int argc, char** argv) {
     if (command == "edges") return edges(args[1], args);
     if (command == "levels") return levels(args[1], args);
     if (command == "format") return format(args[1]);
+    if (command == "expand") return expanded(args[1]);
+    if (command == "view") return look(args[1], args);
     return usage();
 }

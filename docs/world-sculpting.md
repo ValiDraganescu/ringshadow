@@ -156,6 +156,93 @@ for the gunner, a second gun, or a rise left south of the pad.
 
 The satellite maps of the five regions changed are rebaked.
 
+## 8. Sculpting for an AI (the landforms)
+
+The user, 2026-10-19, on the trial's hand-placed rocks: "they look too
+manually placed … When I say sculpting I am generally thinking of a way
+that would allow AIs as you to better create such worlds." A region file
+written as polygons and coordinates comes out as rectangles, circles,
+straight ridges and rocks set one by one, whoever writes it. So the AI says
+what the land does and code draws its shape. Four parts:
+
+### Landforms (S6)
+
+`sculpt.forms` in a region file (docs/regions.md, "sculpt"): a landform in
+words, `expand` (`Landforms.cpp`) draws it into the plain layers (height
+edits, border islands, rocks) at build time, on the server and the client
+alike, the same for the same seed:
+
+| form | where | draws |
+|---|---|---|
+| `butte` | `at` | a free-standing island of rock, levels 3-4, on a talus apron; rocks round its foot |
+| `mesa` | `at` | a wider, stretched island, level 2-3, its faces stepping at a shelf, on an apron |
+| `spires` | `at` | 3-7 narrow spires, levels 3-5, clustered, on a shared apron |
+| `escarpment` | `along`, `face` | a raised bench (level 1-2) whose cliff runs along the line facing `face`; bays bitten into the face, a back that wanders, ends that round off; talus along the foot |
+| `shelf` | `at` | a long low bench, level 1, its sides steep rock (slope 2.5) |
+| `swell` | `at` | a broad gentle rise, level 1 over 6-10 cells: rolling ground |
+| `wash` | `along` | a dry bed meandering along the line: a shallow cut, its floor darker |
+| `boulders` | `at` | a field of boulders and rocks, now and then a small spire |
+
+Each takes `size` (small, medium, large), and may take `height` (levels),
+`count` and `seed`. Every outline is bent by noise at two scales and bitten
+by erosion, so no edge runs straight; rocks gather at feet and round spires
+instead of being placed one by one.
+
+### Styles
+
+`sculpt.style` places a style's own forms after the file's, wherever the
+rules and the file's own raises and islands leave room:
+
+- `open-desert` (the user's reference): a large and two medium buttes, a
+  mesa, two spire clusters, three shelves, six swells, five boulder fields,
+  a wash;
+- `badlands`: eight shelves, two buttes, two large spire clusters, three
+  swells, five boulder fields, two washes;
+- `mesa-country`: four mesas, two large buttes, two small spire clusters,
+  three swells, four boulder fields.
+
+`autocraft-region build` says what each style placed and what found no room.
+
+### Rules
+
+No landform may take ground the game needs (`sculptProblems`; validate
+names each breach and the build of a style's forms skips it):
+
+- each pad's field of fire, 30 cells plus the form's reach (a swell, wash
+  or boulder field only 8): a butte there shields a raid from the Citadel's
+  guns;
+- the spawn points (8), sites (9), veins (7), wells (8), the nest (30),
+  landmarks (6) and the ramps' ends (6);
+- each passage's lane, 16 cells in along its span (a swell or a wash may
+  cross it, boulders may not);
+- the canyon zones' outlines and paths;
+- `sculpt.keep`: more ground the file keeps clear;
+- the land itself: inside the border's outline by the form's reach.
+
+The build's measures say whether the land works: wall and cliff, the open
+horizon at each pad, free-standing rock, straight cliff runs (a hand-drawn
+tell), and the raid's way in: how far a walker goes from each passage and
+the nest to each pad, and how long that takes.
+
+### Eyes
+
+- `autocraft-region view FILE --from s|n|e|w|AZ [--pitch] [--eye --at X,Z]`:
+  the region's ground rendered at an angle (a clay relief with hillshade
+  and shadows; rocks, pads, ore marked), or from a pilot's eye. About 0.4 s.
+- `uv run unreal/Tools/regions/critic.py REGION [--ref IMAGE] [--shots DIR]`:
+  one sheet to judge a region by: the top view, four oblique views, two
+  eye views from the pad, the reference image, the lab's in-game stills,
+  and the build's measures. The AI's loop: write the forms, validate, look
+  at the sheet beside the brief's reference, change, repeat.
+
+### The proof: Prospect Landing
+
+Prospect Landing is re-made with landforms only: no polygon and no rock set
+by hand. It has an escarpment along the north-east, two buttes, a spire
+cluster and the `open-desert` style. The hand-drawn raises, ridges, ramps
+and the 50 rocks set one by one are gone. Kept: the pad's flat circle and
+the lander wreck's mound.
+
 ## Log
 
 | date | step | note |

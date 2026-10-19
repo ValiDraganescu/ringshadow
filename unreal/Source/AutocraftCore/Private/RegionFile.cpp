@@ -556,7 +556,7 @@ Parsed parse(std::string_view text) {
     const json root = json::parse(text.begin(), text.end(), nullptr, false);
     Reader r{out.problems};
     if (!r.object(root, "region", {"id", "name", "size", "base", "ground", "brood", "height", "border", "deposits", "wells",
-                                   "doodads", "pads", "spawns", "sites", "nest", "openings", "zones"}))
+                                   "doodads", "pads", "spawns", "sites", "nest", "openings", "zones", "sculpt"}))
         return out;
     RegionFile f;
     if (const auto id = r.text(root, "id", "", true)) {
@@ -910,6 +910,74 @@ Parsed parse(std::string_view text) {
         for (size_t i = 0; i < f.zones.size(); i++)
             if (!seen.insert(f.zones[i].id).second) r.add("zones[" + std::to_string(i) + "].id", "\"" + f.zones[i].id + "\" is used twice");
     }
+    // The land in words (docs/world-sculpting.md, "Landforms").
+    if (const json* sc = r.field(root, "sculpt", "", false)) {
+        if (r.object(*sc, "sculpt", {"style", "seed", "forms", "keep"})) {
+            Sculpt s;
+            bool ok = true;
+            if (const auto st = r.text(*sc, "style", "sculpt", false)) {
+                if (const auto named = enumNamed<SculptStyle>(*st)) s.style = *named;
+                else { r.add("sculpt.style", "is \"" + *st + "\"; one of " + choices<SculptStyle>()); ok = false; }
+            }
+            if (r.field(*sc, "seed", "sculpt", false)) {
+                if (const auto sd = r.integer(*sc, "seed", "sculpt", false, 0, 1000000)) s.seed = *sd; else ok = false;
+            }
+            r.list(*sc, "forms", s.forms, [&](const json& j, const std::string& w0) -> std::optional<Landform> {
+                const std::string w = "sculpt." + w0;
+                if (!r.object(j, w, {"form", "at", "along", "size", "height", "count", "face", "seed"})) return std::nullopt;
+                Landform l;
+                const auto kind = r.text(j, "form", w, true);
+                if (!kind) return std::nullopt;
+                if (const auto k = enumNamed<LandformKind>(*kind)) l.kind = *k;
+                else { r.add(w + ".form", "is \"" + *kind + "\"; one of " + choices<LandformKind>()); return std::nullopt; }
+                const bool line = l.kind == LandformKind::escarpment || l.kind == LandformKind::wash;
+                if (line) {
+                    const json* a = r.field(j, "along", w, true);
+                    const auto ps = a ? r.points(*a, w + ".along", 2) : std::nullopt;
+                    if (!ps) return std::nullopt;
+                    l.along = *ps;
+                } else {
+                    const auto at = r.point(j, "at", w);
+                    if (!at) return std::nullopt;
+                    l.at = *at;
+                }
+                if (const auto sz = r.text(j, "size", w, false)) {
+                    if (const auto named = enumNamed<LandformSize>(*sz)) l.size = *named;
+                    else { r.add(w + ".size", "is \"" + *sz + "\"; one of " + choices<LandformSize>()); return std::nullopt; }
+                }
+                if (r.field(j, "height", w, false)) {
+                    const auto h = r.integer(j, "height", w, false, 1, maxIslandLevel);
+                    if (!h) return std::nullopt;
+                    l.height = *h;
+                }
+                if (r.field(j, "count", w, false)) {
+                    const auto c = r.integer(j, "count", w, false, 1, 40);
+                    if (!c) return std::nullopt;
+                    l.count = *c;
+                }
+                if (const auto fc = r.text(j, "face", w, false)) {
+                    for (size_t e = 0; e < 4; e++)
+                        if (edgeName(static_cast<Edge>(e)) == *fc) l.face = static_cast<Edge>(e);
+                    if (!l.face) { r.add(w + ".face", "is \"" + *fc + "\"; one of north, east, south, west"); return std::nullopt; }
+                }
+                if (r.field(j, "seed", w, false)) {
+                    const auto sd = r.integer(j, "seed", w, false, 0, 1000000);
+                    if (!sd) return std::nullopt;
+                    l.seed = *sd;
+                }
+                return l;
+            });
+            r.list(*sc, "keep", s.keep, [&](const json& j, const std::string& w0) -> std::optional<Sculpt::Keep> {
+                const std::string w = "sculpt." + w0;
+                if (!r.object(j, w, {"at", "radius"})) return std::nullopt;
+                const auto at = r.point(j, "at", w);
+                const auto rad = r.number(j, "radius", w, true, 0.5, 100);
+                if (!at || !rad) return std::nullopt;
+                return Sculpt::Keep{*at, *rad};
+            });
+            if (ok) f.sculpt = s;
+        }
+    }
     if (out.problems.empty()) out.file = f;
     return out;
 }
@@ -1088,6 +1156,37 @@ std::string write(const RegionFile& f) {
         }
         root["zones"] = list;
     }
+    if (f.sculpt) {
+        const Sculpt& sc = *f.sculpt;
+        ordered j = ordered::object();
+        if (sc.style != SculptStyle::none) j["style"] = std::string(EnumInfo<SculptStyle>::names[static_cast<size_t>(sc.style)]);
+        if (sc.seed != 1) j["seed"] = sc.seed;
+        if (!sc.forms.empty()) {
+            ordered forms = ordered::array();
+            for (const Landform& l : sc.forms) {
+                ordered o{{"form", std::string(EnumInfo<LandformKind>::names[static_cast<size_t>(l.kind)])}};
+                if (l.at) o["at"] = pointNumbers(*l.at);
+                if (!l.along.empty()) {
+                    ordered ps = ordered::array();
+                    for (Vec2 p : l.along) ps.push_back(pointNumbers(p));
+                    o["along"] = ps;
+                }
+                if (l.size != LandformSize::medium) o["size"] = std::string(EnumInfo<LandformSize>::names[static_cast<size_t>(l.size)]);
+                if (l.height) o["height"] = l.height;
+                if (l.count) o["count"] = l.count;
+                if (l.face) o["face"] = std::string(edgeName(*l.face));
+                if (l.seed) o["seed"] = l.seed;
+                forms.push_back(o);
+            }
+            j["forms"] = forms;
+        }
+        if (!sc.keep.empty()) {
+            ordered ks = ordered::array();
+            for (const Sculpt::Keep& k : sc.keep) ks.push_back(ordered{{"at", pointNumbers(k.at)}, {"radius", number(k.radius)}});
+            j["keep"] = ks;
+        }
+        root["sculpt"] = j;
+    }
     std::string out;
     dump(root, out, 0);
     return out + "\n";
@@ -1118,7 +1217,9 @@ Vec2 Built::edgePoint(Edge e, double along, double depth) const {
     return Vec2(along, depth);
 }
 
-Built build(const RegionFile& f) {
+Built build(const RegionFile& given) {
+    if (given.sculpt) return build(expand(given));
+    const RegionFile& f = given;
     Built b;
     MapDefinition& m = b.map;
     m = WindowMaps::build(MapChoice{f.style, f.size, 2}, true, f.seed);
@@ -1308,7 +1409,17 @@ std::vector<Problem> validate(const RegionFile& f, const Built& b) {
     return validate(f, b, reach);
 }
 
-std::vector<Problem> validate(const RegionFile& f, const Built& b, std::vector<SiteReach>& siteReaches) {
+std::vector<Problem> validate(const RegionFile& given, const Built& b, std::vector<SiteReach>& siteReaches) {
+    if (given.sculpt) {
+        // The landforms drawn into the layers; the rules their own forms
+        // break first.
+        RegionFile plain = expand(given);
+        plain.sculpt.reset();
+        std::vector<Problem> out = sculptProblems(given);
+        for (Problem& p : validate(plain, b, siteReaches)) out.push_back(std::move(p));
+        return out;
+    }
+    const RegionFile& f = given;
     std::vector<Problem> out;
     siteReaches.clear();
     const MapDefinition& m = b.map;

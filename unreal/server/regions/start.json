@@ -6,40 +6,7 @@
   "brood": 1,
   "height": [
     {"op": "flatten", "area": {"circle": [68, 48, 16]}, "level": 0},
-    {
-      "op": "raise",
-      "area": [[92, 10], [104, 6], [124, 7], [136, 13], [135, 27], [121, 32], [105, 33], [92, 30]],
-      "level": 1
-    },
-    {"op": "raise", "area": [[118, 11], [128, 12], [131, 21], [120, 24]], "level": 2},
-    {"op": "ridge", "line": [[96, 66], [110, 72], [128, 69]], "width": 3, "level": 1},
-    {"op": "ramp", "from": [84, 14], "to": [97, 14], "width": 5, "fromLevel": 0, "level": 1},
-    {"op": "ramp", "from": [84, 26], "to": [97, 26], "width": 5, "fromLevel": 0, "level": 1},
-    {
-      "op": "ramp",
-      "from": [107, 18],
-      "to": [123, 18],
-      "width": 4,
-      "fromLevel": 1,
-      "level": 2
-    },
-    {"op": "raise", "area": {"circle": [50, 30, 3]}, "level": 1, "slope": 5},
-    {
-      "op": "ridge",
-      "line": [[45, 35], [44.5, 44], [45.5, 52], [43, 62]],
-      "width": 3,
-      "level": 1,
-      "slope": 4
-    },
-    {
-      "op": "ridge",
-      "line": [[30, 64], [16, 64], [9, 72], [9, 84], [16, 91], [30, 92], [40, 86]],
-      "width": 2,
-      "level": 1,
-      "slope": 2
-    },
-    {"op": "ridge", "line": [[112, 33], [114, 38], [113, 42]], "width": 3, "level": 1},
-    {"op": "ridge", "line": [[113, 58], [114, 63], [112, 67]], "width": 3, "level": 1}
+    {"op": "raise", "area": {"circle": [50, 30, 3]}, "level": 1, "slope": 5}
   ],
   "border": {
     "outline": [
@@ -110,69 +77,6 @@
       [2.9, 36.7],
       [1.9, 38.1]
     ],
-    "islands": [
-      {
-        "outline": [
-          [37, 26.2],
-          [34.9, 27.8],
-          [32.8, 26.9],
-          [31.3, 26.5],
-          [30.7, 25.3],
-          [31.1, 23.2],
-          [31.3, 21.1],
-          [33, 21.4],
-          [35.6, 21.3],
-          [37.2, 22.9],
-          [37, 24.7]
-        ],
-        "level": 4,
-        "kind": "butte"
-      },
-      {
-        "outline": [
-          [34.7, 77.8],
-          [32.7, 78.8],
-          [31.4, 77.5],
-          [30.6, 75.7],
-          [30.1, 74.3],
-          [30.7, 72.6],
-          [33.6, 72.5],
-          [34.6, 72],
-          [36.7, 73.2],
-          [37.3, 75.1],
-          [36.3, 77.3]
-        ],
-        "level": 3,
-        "kind": "butte"
-      },
-      {
-        "outline": [
-          [123.4, 52.6],
-          [121.8, 53.2],
-          [119.3, 54.3],
-          [117.6, 51.8],
-          [117.1, 48.9],
-          [117.9, 47.4],
-          [118.5, 44.8],
-          [122.1, 45.2],
-          [124.8, 46.4],
-          [124.9, 48.5],
-          [125.9, 51.7]
-        ],
-        "level": 2,
-        "kind": "mesa"
-      },
-      {
-        "outline": [[29.3, 56.5], [28.4, 54.6], [29.5, 52.9], [31.3, 52.4], [33.2, 54.2], [33, 55.6], [31.5, 57.3]],
-        "level": 5,
-        "kind": "spire"
-      },
-      {
-        "outline": [[57.6, 76.4], [58.6, 74.9], [59.8, 74], [61.3, 75.5], [61.7, 76.5], [60.2, 77.9], [58.5, 77.3]],
-        "level": 4,
-        "kind": "spire"
-      }
-    ],
     "level": 1,
     "slope": 5
   },
@@ -193,65 +97,10 @@
   "doodads": [
     {"kind": "sunkHauler", "at": [100, 56], "rotation": 25},
     {"kind": "derrickRuin", "at": [28, 44]},
-    {"kind": "rockSpire", "at": [127.8, 17.1], "rotation": 144, "scale": 3.85},
-    {"kind": "rockSpire", "at": [125.9, 18.5], "rotation": 53, "scale": 2.69},
-    {"kind": "rockSpire", "at": [124.5, 19.6], "rotation": 161, "scale": 3.12},
-    {"kind": "rockSpire", "at": [121.4, 18.6], "rotation": 131, "scale": 3.56},
-    {"kind": "rockSpire", "at": [122, 16], "rotation": 196, "scale": 2.78},
-    {"kind": "rockSpire", "at": [123.4, 14.4], "rotation": 86, "scale": 3.63},
-    {"kind": "rockSpire", "at": [126, 15.5], "rotation": 14, "scale": 3.02},
-    {"kind": "rockSpire", "at": [99, 13], "rotation": 17, "scale": 2.2},
-    {"kind": "rock", "at": [113.2, 36.8], "rotation": 18, "scale": 1.19},
-    {"kind": "rock", "at": [132.3, 33], "rotation": 333, "scale": 0.81},
-    {"kind": "boulder", "at": [134.7, 30.4], "rotation": 175, "scale": 1.66},
-    {"kind": "boulder", "at": [132.6, 30.6], "rotation": 217, "scale": 1.58},
-    {"kind": "boulder", "at": [106.2, 37.3], "rotation": 262, "scale": 0.94},
-    {"kind": "rock", "at": [135.9, 30.6], "rotation": 189, "scale": 0.89},
-    {"kind": "rock", "at": [132.8, 31.3], "rotation": 140, "scale": 1.02},
-    {"kind": "rock", "at": [107.2, 36.5], "rotation": 215, "scale": 1.17},
-    {"kind": "rock", "at": [125.6, 66.8], "rotation": 272, "scale": 1.6},
-    {"kind": "rock", "at": [117.4, 67.3], "rotation": 352, "scale": 1.36},
-    {"kind": "rock", "at": [117.6, 68], "rotation": 138, "scale": 1.57},
-    {"kind": "rock", "at": [116.7, 69.2], "rotation": 175, "scale": 1.14},
-    {"kind": "boulder", "at": [119.4, 66.8], "rotation": 247, "scale": 0.97},
-    {"kind": "boulder", "at": [122.6, 67.7], "rotation": 214, "scale": 0.99},
-    {"kind": "rock", "at": [119.7, 68.5], "rotation": 175, "scale": 1.26},
-    {"kind": "rockSpire", "at": [6.4, 77], "rotation": 190, "scale": 0.94},
-    {"kind": "boulder", "at": [29, 60.6], "rotation": 225, "scale": 1.16},
-    {"kind": "boulder", "at": [7.7, 85.3], "rotation": 49, "scale": 1.12},
-    {"kind": "rock", "at": [18, 60], "rotation": 163, "scale": 1.7},
-    {"kind": "rock", "at": [12.7, 92.8], "rotation": 199, "scale": 1.59},
-    {"kind": "rockSpire", "at": [5.3, 77], "rotation": 275, "scale": 1.38},
-    {"kind": "boulder", "at": [17, 62.5], "rotation": 56, "scale": 1.64},
-    {"kind": "boulder", "at": [12.4, 63.7], "rotation": 209, "scale": 1.38},
-    {"kind": "rockSpire", "at": [6.1, 79], "rotation": 69, "scale": 1.52},
-    {"kind": "boulder", "at": [24, 61.1], "rotation": 53, "scale": 1.01},
-    {"kind": "rock", "at": [35.7, 93.2], "rotation": 57, "scale": 1.03},
-    {"kind": "rock", "at": [114.2, 33.3], "rotation": 115, "scale": 0.81},
-    {"kind": "boulder", "at": [114.7, 34.2], "rotation": 259, "scale": 0.94},
-    {"kind": "rock", "at": [110.7, 38.2], "rotation": 278, "scale": 1.09},
-    {"kind": "boulder", "at": [115.3, 42.6], "rotation": 81, "scale": 1.15},
-    {"kind": "rock", "at": [109.8, 36.2], "rotation": 189, "scale": 1.14},
-    {"kind": "rock", "at": [115.4, 59.6], "rotation": 75, "scale": 1.63},
-    {"kind": "boulder", "at": [110.7, 59.5], "rotation": 142, "scale": 1.52},
-    {"kind": "rock", "at": [114.9, 57.6], "rotation": 269, "scale": 1.25},
-    {"kind": "boulder", "at": [116, 57.4], "rotation": 283, "scale": 0.96},
-    {"kind": "rock", "at": [115.6, 67.5], "rotation": 138, "scale": 1.62},
-    {"kind": "rock", "at": [49.3, 36.2], "rotation": 288, "scale": 1.24},
-    {"kind": "rock", "at": [47.8, 60.4], "rotation": 98, "scale": 1.07},
-    {"kind": "rock", "at": [18.6, 36.8], "rotation": 296, "scale": 0.55},
-    {"kind": "rock", "at": [41.2, 54], "rotation": 26, "scale": 0.89},
     {"kind": "plant", "at": [27.7, 26.9], "rotation": 30, "scale": 0.58},
     {"kind": "plant", "at": [124.7, 57.8], "rotation": 136, "scale": 0.59},
-    {"kind": "rock", "at": [17.7, 21.5], "rotation": 312, "scale": 0.64},
-    {"kind": "rock", "at": [121.1, 25.2], "rotation": 30, "scale": 0.6},
     {"kind": "bush", "at": [110.9, 80.4], "rotation": 184, "scale": 0.88},
-    {"kind": "rock", "at": [27.1, 62.7], "rotation": 237, "scale": 0.83},
     {"kind": "plant", "at": [94.5, 29.4], "rotation": 164, "scale": 0.78},
-    {"kind": "rock", "at": [31.3, 64.3], "rotation": 71, "scale": 0.59},
-    {"kind": "rock", "at": [24.6, 25.1], "rotation": 29, "scale": 0.62},
-    {"kind": "rock", "at": [88.6, 59.4], "rotation": 177, "scale": 0.82},
-    {"kind": "rock", "at": [39, 32.7], "rotation": 282, "scale": 0.53},
     {"kind": "plant", "at": [127.9, 58.4], "rotation": 304, "scale": 0.9},
     {"kind": "crateStack", "at": [82, 40], "rotation": 15},
     {"kind": "debris", "at": [47, 27], "rotation": 30, "scale": 1.2},
@@ -279,6 +128,20 @@
     ],
     "west": [
       {"span": [41, 55], "level": 0}
+    ]
+  },
+  "sculpt": {
+    "style": "open-desert",
+    "forms": [
+      {
+        "form": "escarpment",
+        "along": [[100, 22], [118, 17], [136, 24]],
+        "height": 2,
+        "face": "south"
+      },
+      {"form": "butte", "at": [30, 74], "height": 4},
+      {"form": "spires", "at": [114, 62], "size": "small"},
+      {"form": "butte", "at": [28, 20], "height": 3}
     ]
   }
 }

@@ -23,20 +23,39 @@ Run from the repo root; `T=unreal/server/build/autocraft-region`.
    corridor), openField (flat), ridge (a high spine), badlands (high pockets,
    low ground). For a clean slate add `"drop": ["resources", "doodads"]`.
    Done when one base is chosen and copied to `unreal/server/regions/<id>.json`.
-3. **Plan on the grid.** Read the base's preview (Read tool on the PNG) and
+3. **Say the land, don't draw it.** Shape the ground with `sculpt`
+   (docs/regions.md, "sculpt"): a style for the brief and a few landforms
+   where the brief wants them (an escarpment along there, a butte here,
+   spires, a wash). Write polygons, circles and single rocks only for what
+   a landform cannot say (a pad's flat, a canyon zone): hand-drawn shapes
+   read as placed. `validate` names a form that breaks a rule; `build`
+   says what the style placed, the straight cliff runs (keep 0) and the
+   raid's way in.
+4. **Plan on the grid.** Read the base's preview (Read tool on the PNG) and
    write down, in cells, where each thing of the brief goes: cliffs and
    ramps first, then pads, spawns, deposits, wells, openings.
-4. **Edit the file** in small batches: one layer at a time (ground, then
+5. **Edit the file** in small batches: one layer at a time (ground, then
    resources, then places, then openings).
-5. **Validate**: `$T validate FILE`. Fix every problem it names; it gives the
+6. **Validate**: `$T validate FILE`. Fix every problem it names; it gives the
    region position.
-6. **Preview and look**: `$T preview FILE -o /tmp/<id>.png`, then Read the PNG.
+7. **Preview and look**: `$T preview FILE -o /tmp/<id>.png`, then Read the PNG.
    Check every item of the brief against the picture: is it where the brief
    says, does the ground read the way it was asked (a cliff where a wall was
    wanted, a ramp a machine can climb), are the problems ringed in red gone.
-7. **Iterate** 4 → 6 until `validate` prints `ok` and every brief item is
+8. **See it at an angle**: the top-down preview hides how tall a wall is
+   and what a pilot sees. `$T view FILE -o /tmp/<id>-s.png` (an overview
+   from the south; `--from n|e|s|w`) and `$T view FILE --eye -o
+   /tmp/<id>-eye.png --from n` (a pilot's eye on the first pad). Once a
+   round of edits is done, make the critic's sheet and judge the region on
+   it against the brief: `uv run unreal/Tools/regions/critic.py ID [--ref
+   IMAGE] [--shots DIR] -o /tmp/<id>-sheet.jpg`. Look at it with the Read
+   tool. Ask whether the ground reads as asked from the side and from the
+   pad: an open horizon or a bowl, rock standing free or walling in, ramps
+   and shelves where the brief put them ([docs/regions.md](../../../docs/regions.md),
+   "Seeing a region").
+9. **Iterate** 5 → 8 until `validate` prints `ok` and every brief item is
    visible where it belongs.
-8. **Report**: the file path, the final preview's path, and `$T build FILE`'s
+10. **Report**: the file path, the final preview's and sheet's paths, and `$T build FILE`'s
    summary (ore, MH, open ground).
 
 ## Borders and passages (W4)

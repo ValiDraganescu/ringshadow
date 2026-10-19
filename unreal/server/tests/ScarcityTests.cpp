@@ -106,7 +106,8 @@ TEST(scarcity_validate_refuses_plenty) {
     {
         // A third vein: a mound far from both.
         region::RegionFile f = ok;
-        f.deposits.push_back(region::Deposit{Vec2(120, 80), 10, 0});
+        // Open ground clear of the landforms (a vein keeps them off it).
+        f.deposits.push_back(region::Deposit{Vec2(60, 72), 10, 0});
         const auto p = scarcity(f);
         EXPECT_TRUE(has(p, "3 veins"));
         EXPECT_TRUE(has(p, "a vein of 1 mounds"));
@@ -137,7 +138,8 @@ TEST(scarcity_validate_refuses_plenty) {
         // Brood 0 (the example file, a generated region): no limit.
         region::RegionFile f = ok;
         f.brood = 0;
-        f.deposits.push_back(region::Deposit{Vec2(120, 80), 10, 0});
+        // Open ground clear of the landforms (a vein keeps them off it).
+        f.deposits.push_back(region::Deposit{Vec2(60, 72), 10, 0});
         EXPECT_TRUE(scarcity(f).empty());
     }
 }
