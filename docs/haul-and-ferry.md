@@ -210,7 +210,9 @@ client calls it every frame with its own clock between snapshots.
 (`shuttleWalk`): the hull's sides, the nose, the console, the post and the
 shut ramp (walkable from open 0.95, as the Citadel's door) block; on the
 deck or a ramp that is down the ground under it does not matter. A rider in
-flight walks only in its bay. The AI's grid has a grounded ship's hull and
+flight walks only in its bay. A Mule meets them with its whole body (its
+middle and its two ends along its 3.0 length), so in the bay its middle
+stays between x −1.0 and 0.86. The AI's grid has a grounded ship's hull and
 ramp solid (the Brood and the mercenaries never walk in); nobody aboard is
 pushed out; nobody aboard crosses a region's edge on foot.
 
@@ -219,8 +221,10 @@ on, Pad link's reach), the ramp toward the caller, turned a quarter at a time
 until the hull and the ramp lie inside the region; one ship to a pad ("The
 Dropship is on its way", "The Dropship is here"). Its touch down moves
 whoever stands under the hull out by its nearest side. Ramp: the request
-`Ramp { open }`, within 1.5 cells of the ramp button inside (*assumed*);
-refused "Someone is on the ramp", "Too far from the ramp button", "Wait for
+`Ramp { open }`, within 1.5 cells of the ramp button inside (*assumed*;
+measured from the nearest point of the pressing unit's body, a driven
+Mule's box too); refused "Someone is on the ramp" (anyone's body over the
+ramp's strip behind the opening), "Too far from the ramp button", "Wait for
 the landing". Take-off: today's `Fly { region, pad }`, from within 1.5 cells
 of the take-off button (*assumed*), the ramp fully shut ("Close the ramp
 first"); the one who presses pays (half from a Spacedock, nothing with

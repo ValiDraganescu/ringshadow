@@ -2,6 +2,7 @@
 // section 3; Simulation+Shuttle.members.h): its stages, its ramp, the walk
 // in its bay, the riders carried, the buttons' refusals.
 
+#include "Mule.h"
 #include "Shuttle.h"
 #include "Simulation.h"
 
@@ -13,6 +14,38 @@ namespace ac {
 namespace {
 
 bool onFoot(const Unit& u) { return u.hp > 0 && !u.airborne(); }
+
+/// The circles a walker's body stands on at `p`, each of radius `r`: its
+/// middle, and a hauler's two ends (the Mule, `Mule::length` long along its
+/// heading), so its nose and tail meet the bay's walls too.
+std::vector<Vec2> bodyAt(const Unit& u, Vec2 p, double r) {
+    if (!u.stats().hauler) return {p};
+    const double off = std::max(0.0, Mule::length / 2 - r);
+    const Vec2 d(std::cos(u.heading), std::sin(u.heading));
+    return {p, p + d * off, p - d * off};
+}
+
+/// `u`'s body seen from above in the frame of `s`: a hauler's box, else its
+/// walk's circle as a square.
+Block bodyIn(const Shuttle& s, const Unit& u) {
+    const Vec2 half = u.stats().hauler ? Vec2(Mule::length / 2, Mule::width / 2) : Vec2(1, 1) * (Rules::radius(u.kind) * 0.8);
+    return Block{ShuttleBay::local(s, u.position), half, u.heading - s.heading};
+}
+
+/// A button at `b` (the ship's frame) is within reach of `u`: from its
+/// body's nearest point.
+bool bodyReaches(const Shuttle& s, const Unit& u, Vec3 b) {
+    const Block body = bodyIn(s, u);
+    return length(body.nearest(Vec2(b.x, b.y)) - Vec2(b.x, b.y)) <= ShuttleBay::reach;
+}
+
+/// `u`'s body reaches over the ramp's strip, behind the opening.
+bool bodyOverRamp(const Shuttle& s, const Unit& u) {
+    const Block body = bodyIn(s, u);
+    const Slab box = body.bounds();
+    return box.min.x < ShuttleBay::rear - 0.05 && box.max.x > ShuttleBay::rampFoot() && box.min.y < ShuttleBay::halfWide &&
+           box.max.y > -ShuttleBay::halfWide;
+}
 
 } // namespace
 
@@ -59,16 +92,12 @@ std::optional<std::string> Simulation::rampRefusal(const Shuttle& s, const Unit&
     if (s.flying()) return std::string("Wait for the landing");
     if (!s.grounded()) return std::string("No ramp to work here");
     const Vec2 l = ShuttleBay::local(s, u.position);
-    const Vec3 b = ShuttleBay::rampButton;
-    if (!ShuttleBay::inBay(l) || length(l - Vec2(b.x, b.y)) > ShuttleBay::reach) return std::string("Too far from the ramp button");
+    if (!ShuttleBay::inBay(l) || !bodyReaches(s, u, ShuttleBay::rampButton)) return std::string("Too far from the ramp button");
     if (open) return std::nullopt;
-    for (const Unit& v : state.units) {
-        if (!onFoot(v)) continue;
-        const Vec2 w = ShuttleBay::local(s, v.position);
-        // On the ramp's strip, or in the opening it shuts: its walk's circle
-        // (`pilotCanStand`'s radius) past the opening's edge.
-        if (ShuttleBay::onRamp(w, Rules::radius(v.kind) * 0.8)) return std::string("Someone is on the ramp");
-    }
+    // Anyone whose body (its walk's circle, a Mule's box) reaches past the
+    // opening's edge over the ramp's strip.
+    for (const Unit& v : state.units)
+        if (onFoot(v) && bodyOverRamp(s, v)) return std::string("Someone is on the ramp");
     return std::nullopt;
 }
 
@@ -88,8 +117,7 @@ std::optional<std::string> Simulation::takeOffRefusal(const Shuttle& s, const Un
     if (s.flying()) return std::string("In flight");
     if (!s.grounded()) return std::string("Wait for the landing");
     const Vec2 l = ShuttleBay::local(s, u.position);
-    const Vec3 b = ShuttleBay::takeOffButton;
-    if (!ShuttleBay::inBay(l) || length(l - Vec2(b.x, b.y)) > ShuttleBay::reach) return std::string("Too far from the take-off button");
+    if (!ShuttleBay::inBay(l) || !bodyReaches(s, u, ShuttleBay::takeOffButton)) return std::string("Too far from the take-off button");
     if (s.ramp.open > 0 || s.ramp.opening) return std::string("Close the ramp first");
     return std::nullopt;
 }
@@ -229,18 +257,20 @@ void Simulation::stepShuttles(double dt) {
 Simulation::ShuttleWalk Simulation::shuttleWalk(const Unit& u, Vec2 p, double r) const {
     using B = ShuttleBay;
     for (const Shuttle& s : state.shuttles) {
+        const std::vector<Vec2> body = bodyAt(u, p, r);
         if (s.flying()) {
             if (!s.rides(u.id)) continue;
             // A rider walks only in the bay, whatever lies under the pad.
-            const Vec2 l = B::local(s, p);
-            if (B::solidAt(l, r, false) || !B::inBay(l)) return ShuttleWalk::blocked;
-            return ShuttleWalk::deck;
+            for (const Vec2 q : body)
+                if (B::solidAt(B::local(s, q), r, false)) return ShuttleWalk::blocked;
+            return B::inBay(B::local(s, p)) ? ShuttleWalk::deck : ShuttleWalk::blocked;
         }
         if (!s.grounded()) continue;
         const Vec2 l = B::local(s, p);
-        if (!B::covers(l, r)) continue;
+        if (std::none_of(body.begin(), body.end(), [&](Vec2 q) { return B::covers(B::local(s, q), r); })) continue;
         const bool down = s.ramp.open >= B::rampDown;
-        if (B::solidAt(l, r, down)) return ShuttleWalk::blocked;
+        for (const Vec2 q : body)
+            if (B::solidAt(B::local(s, q), r, down)) return ShuttleWalk::blocked;
         if (B::inBay(l) || (down && B::onRamp(l))) return ShuttleWalk::deck;
     }
     return ShuttleWalk::none;
@@ -251,7 +281,8 @@ std::optional<Vec2> Simulation::shuttleContact(const Unit& u, Vec2 from, Vec2 to
     for (const Shuttle& s : state.shuttles) {
         if (s.flying() ? !s.rides(u.id) : !s.grounded()) continue;
         const bool down = !s.flying() && s.ramp.open >= B::rampDown;
-        if (const auto b = B::solidAt(B::local(s, to), r, down)) return B::world(s, b->nearest(B::local(s, from)));
+        for (const Vec2 q : bodyAt(u, to, r))
+            if (const auto b = B::solidAt(B::local(s, q), r, down)) return B::world(s, b->nearest(B::local(s, from + (q - to))));
     }
     return std::nullopt;
 }

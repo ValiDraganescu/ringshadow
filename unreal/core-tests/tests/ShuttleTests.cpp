@@ -2,6 +2,7 @@
 // shape, the ramp and its button, the take-off button's refusals, the riders
 // carried and untouchable, the touch down, the empty ship leaving, its pose,
 // from hand-built scenes of a few seconds.
+#include "Mule.h"
 #include "Shuttle.h"
 #include "HallScene.h"
 #include "SimHelpers.h"
@@ -334,6 +335,18 @@ TEST(mule_drivesUpTheRampIntoTheBay) {
     steps(sim, 12);
     const Vec2 l = ShuttleBay::local(*sim.shuttle(id), unitOf(sim, m).position);
     EXPECT_TRUE(ShuttleBay::inBay(l));
-    EXPECT_TRUE(l.x < ShuttleBay::front - Rules::radius(Unit::Kind::mule) * 0.8 + 0.01);
+    // Its body is 3 long: its nose stops at the console, not its middle.
+    EXPECT_TRUE(l.x < ShuttleBay::front - Mule::length / 2 + 0.05 && l.x > ShuttleBay::front - Mule::length / 2 - 0.4);
     EXPECT_TRUE(sim.aboard(unitOf(sim, m)) != nullptr);
+    // Its driver presses the take-off button from it (its body's nose), and
+    // the ramp button from the bay's back with its tail by the opening.
+    Shuttle& ship = *sim.shuttle(id);
+    ship.ramp = Door{0, false};
+    EXPECT_TRUE(!sim.takeOffRefusal(ship, unitOf(sim, m)));
+    unitOf(sim, m).position = ShuttleBay::world(ship, Vec2(-0.95, 0));
+    ship.ramp = Door{1, true};
+    EXPECT_TRUE(!sim.rampRefusal(ship, unitOf(sim, m), false));
+    // Backed onto the ramp, its tail over the strip: it is on the ramp.
+    unitOf(sim, m).position = ShuttleBay::world(ship, Vec2(-1.3, 0));
+    EXPECT_EQ(sim.rampRefusal(ship, unitOf(sim, m), false).value_or(""), std::string("Someone is on the ramp"));
 }

@@ -170,7 +170,7 @@ TEST(shuttle_mule_rides_with_its_driver) {
     Simulation& sim = w.regionOf(a)->simulation();
     auto unit = [&](int64_t id) { return &sim.state.units[size_t(*sim.unitIndex(id))]; };
     // On the Mule in the bay by the ramp button, the ramp shut from it.
-    unit(mule)->position = ShuttleBay::world(*s, Vec2(-1.1, -0.2));
+    unit(mule)->position = ShuttleBay::world(*s, Vec2(-0.95, 0));
     unit(mule)->heading = s->heading;
     unit(mule)->haul = Haul{300, 12};
     unit(prospector)->position = Mule::perch(*unit(mule));
@@ -181,7 +181,7 @@ TEST(shuttle_mule_rides_with_its_driver) {
     run(w, ShuttleBay::rampSeconds + 0.2);
     // Up to the console on it, and off.
     s = nearestShip(w, a);
-    unit(mule)->position = ShuttleBay::world(*s, Vec2(1.6, 0));
+    unit(mule)->position = ShuttleBay::world(*s, Vec2(0.8, 0));
     unit(prospector)->position = Mule::perch(*unit(mule));
     w.step();
     ASSERT_TRUE(!w.fly(a, "cold-fork", "Landing Pad 1"));
