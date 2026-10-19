@@ -302,11 +302,11 @@ builds it alone). A post-process, on while the ship nearest the camera
 three panes (the centre pane and the two side panes swept back, unfolded
 beside it) where it meets one before the scene; the pane's point is the
 glass coordinate (across from the centre pane's middle, down from its top,
-in pane heights: 1.16 m), so the beads, rivulets and sheets sit on the
+in pane heights: 1.47 m), so the beads, rivulets and sheets sit on the
 glass and stay there as the view turns, seen from inside and out. The
 lens's screen offsets go back to the view through the glass coordinate's
-screen derivatives. Two blades in tandem on the centre pane (pivots 0.26 m
-left and 0.28 m right of its middle, 0.54 m long, parked lying left along
+screen derivatives. Two blades in tandem on the centre pane (pivots 0.24 m
+left and 0.30 m right of its middle, 0.70 m long, parked lying left along
 the sill, out to 62° right); whichever crossed a spot last wiped it; the
 side panes are never wiped. The blades are the model's (`wipers_k`), not
 drawn by the material. Each ship has its own `ac::Wipers`, fed the rain

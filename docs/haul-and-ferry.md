@@ -286,10 +286,13 @@ World message), RolesTests' and WorldTests' flights, FrontierTests'
     edges flush with the deck; the orange ramp post in a niche left of the
     opening (its hazard plate, the button, `rampLamps_0` orange = open,
     flashing while it moves, `rampLamps_1` green = shut); the console
-    under the glass (x 2.36 … 2.68, desk 1.16 … 1.28) with switches, two
-    screens and the green `takeoffButton` (lit while the ship can go). The
-    windshield (W2): three panes (the side ones swept back) in a riveted
-    frame, pillars in blue and white bands, two wipers on the centre pane.
+    under the glass (x 2.36 … 2.68, desk 0.96 … 1.08) with switches, two
+    screens and the green `takeoffButton` (a glossy dome with a lit core in
+    a dark bezel on a chrome housing, a hazard collar; the core lit while
+    the ship can go). The windshield (W2): three panes (the side ones swept
+    back) in a riveted frame from 1.20 up to 2.48 (low, so the ground ahead
+    shows through it; the nose under it drops away), pillars in blue and
+    white bands, two wipers on the centre pane.
     The rear ramp hinges at the deck's back edge: down it lies on the
     ground 2.0 behind (104.5°). Renders with a Prospector for scale:
     [art/models/dropship/c4](../art/models/dropship/c4) (`model-*`).
@@ -319,7 +322,11 @@ World message), RolesTests' and WorldTests' flights, FrontierTests'
     "Close the ramp first", "Wait for the landing", "In flight") are the
     prompt in the blocked tone and the key sends nothing; the server's
     come back as notes (`FAcMmoClient::CallShuttle`, `Ramp`,
-    `ShuttleRefusal`). A Prospector driving its Mule works the buttons too.
+    `ShuttleRefusal`). Driving a Mule (the manager's rule), E works a
+    ship's button, or a Citadel's door (shut or moving: the door; open: its
+    panels), only with the crosshair on it, and climbs off otherwise; the
+    prompt says which (`AcShuttleAct::DriverAim`, set by the pawn each
+    frame; `Autocraft.Pilot.ShuttleAct`).
   - **The windshield's rain** (`M_AcWindshield`, docs/weather.md "The
     Dropship's windshield"): the visor's water on the three panes in the
     glass's own frame, two blades in tandem, the side panes never wiped,
@@ -346,6 +353,10 @@ World message), RolesTests' and WorldTests' flights, FrontierTests'
     menu, the lift, dash and approach seen through the windshield, the
     switch into Cold Fork, open the ramp, walk out. `-AcMmoShots=DIR
     -AcMmoShotsFerry -AcMmoWeather=rain` takes its pictures (`ferry-N-*`).
+    `mmoferrymule`: the Mule staged behind the landed ship's ramp (the
+    server's `ferry mule`), taken at its perch, driven straight up the ramp
+    into the bay (it fits, its driver aboard), the ramp closed from the
+    perch with the crosshair on the post, "E · CLIMB OFF" with it off.
     F2's cinematic flight (the camera chasing the ship, `mmofly`,
     `-AcMmoShotsF2`) is gone.
 - The Mule model (H2) with the side load screen (room left, ore, MH), its
