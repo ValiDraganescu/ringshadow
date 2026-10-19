@@ -136,6 +136,16 @@ It walks the region's structures every frame (microseconds) and writes the
 collection only when a box changes (a Citadel done or gone, the order by
 the camera). The materials share one test (`shelter_hlsl`).
 
+The walk-in Dropship's bay (C4, docs/haul-and-ferry.md) is a fifth box,
+turned with the ship (it banks and pitches in flight): the bay and the
+cockpit nook of the drawn ship nearest the camera within 80 m
+(`AcShelter::NearestBay`), from the deck slab to the ceiling, written every
+frame it changes as `ShelterShip` (its centre) and `ShelterShipX`, `Y`, `Z`
+(its unit axes, each with its half size in w). The rain stops at its
+open ramp; the ramp is open sky. A driven unit in a landed ship's bay, or
+riding one in flight, counts as sheltered for the visor and the rain bed
+(`AcShelter::DrivenSheltered`).
+
 1. **No streaks indoors** (`M_AcRain`): the vertex shader collapses a
    streak to a point when its middle or either end lies in a box, so the
    draw call stays one. Inside the hall no rain falls; from outside
@@ -280,6 +290,35 @@ glass right behind it clear), `3-half`, `4-full` (the middle half way to
 its next wipe, and just before it), `5-nowipe` (the blade held parked for
 10 s), `6-wiping` (its first sweep through that water), `7-cleared`. The
 flow logs the material's parameters at each picture.
+
+### The Dropship's windshield (C4)
+
+The walk-in Dropship's windshield (docs/haul-and-ferry.md section 4) gets
+the same water, on its own glass: `M_AcWindshield`
+(`make_weather_materials.py`, `windshield_hlsl()`: the lens's HLSL with
+the view's coordinates swapped for the glass's; `AC_WEATHER_ONLY=windshield`
+builds it alone). A post-process, on while the ship nearest the camera
+(within 25 m) has water on its glass: each pixel's ray is met with the
+three panes (the centre pane and the two side panes swept back, unfolded
+beside it) where it meets one before the scene; the pane's point is the
+glass coordinate (across from the centre pane's middle, down from its top,
+in pane heights: 1.16 m), so the beads, rivulets and sheets sit on the
+glass and stay there as the view turns, seen from inside and out. The
+lens's screen offsets go back to the view through the glass coordinate's
+screen derivatives. Two blades in tandem on the centre pane (pivots 0.26 m
+left and 0.28 m right of its middle, 0.54 m long, parked lying left along
+the sill, out to 62° right); whichever crossed a spot last wiped it; the
+side panes are never wiped. The blades are the model's (`wipers_k`), not
+drawn by the material. Each ship has its own `ac::Wipers`, fed the rain
+where it is (automatic, as the visor's); `AcVisor::Params` makes the
+parameters, with `GlassArc`/`GlassBlade` for this glass, plus
+`GlassPivots` and the panes' frame in the world (`GlassOrigin`,
+`GlassAcross`, `GlassUp`, `GlassRight`, `GlassLeft`) from
+`AAcShuttleShip::Glass`. Aboard, the dashboard's WIPERS plate shows the
+windshield's and its passes are heard (`FAcAudioRules::Shuttles`);
+`ac.Ferry.Glass 0` turns it off. Pictures: the `mmoferry` flow with
+`-AcMmoShots=DIR -AcMmoShotsFerry -AcMmoWeather=rain` (`ferry-4-console`,
+`ferry-5-lift`, `ferry-6-dash`).
 
 ## Ringshadow sweep
 

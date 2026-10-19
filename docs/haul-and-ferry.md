@@ -270,6 +270,84 @@ World message), RolesTests' and WorldTests' flights, FrontierTests'
   the bay (B2), the ramp post, the console and its button, the windshield
   (W2, three panes) with two wipers, cabin lamps. The first-person camera
   inside works like the Citadel's hall (walls and ceiling stop it).
+  As built (c4-ship-look, 2026-10-19):
+  - **The model** `ferry_blue` (`unreal/Tools/Editor/models/ferry.py`, a
+    Geometry Script model; the strategy game's `dropship_blue` is left as
+    it is): today's look grown round the bay, about 6.8 cells long, 5 wide
+    over the nacelles and 4.5 high to the fins (grey hull, the team's blue
+    side panels and four leg pods at the corners, the nacelles high at the
+    back with open octagonal chrome intakes and exhausts, fans and vanes
+    in them, twin fins with red beacons, white crosses on the roof and
+    the sides, orange lamps). Its frame is the sim's (`ShuttleBay`): the
+    deck at 0.5, the bay x −2.5 … 1.5 with the cockpit nook to the console
+    at 2.36, ±1.0 across the ribs, 2.0 to the ribs' undersides. Inside
+    (B2): octagonal ribs, wall boxes with cyan lamps, pipe runs, four warm
+    `cabinLamps_k` with their lights, chrome tie-down rails and hazard deck
+    edges flush with the deck; the orange ramp post in a niche left of the
+    opening (its hazard plate, the button, `rampLamps_0` orange = open,
+    flashing while it moves, `rampLamps_1` green = shut); the console
+    under the glass (x 2.36 … 2.68, desk 1.16 … 1.28) with switches, two
+    screens and the green `takeoffButton` (lit while the ship can go). The
+    windshield (W2): three panes (the side ones swept back) in a riveted
+    frame, pillars in blue and white bands, two wipers on the centre pane.
+    The rear ramp hinges at the deck's back edge: down it lies on the
+    ground 2.0 behind (104.5°). Renders with a Prospector for scale:
+    [art/models/dropship/c4](../art/models/dropship/c4) (`model-*`).
+  - **The pose** (`AcPoseFerry.h`, tested in `Autocraft.Pose.Ferry.*`):
+    the ramp on its hinge, the buttons pushed in 1.5 and 2 cm for a
+    quarter second on each press, the lamps, the wipers turning in the
+    glass's plane on `ac::Wipers`'s sweep (mapped onto −78° … 62°), the
+    fans and jets with the thrust, the beacons.
+  - **Drawn** by `AAcShuttleShip` (`AcShuttleShip.h`), one actor per ship
+    of the shown state, every frame at `ac::shuttlePose` with the stage's
+    clock run on between snapshots (`AcShuttleView.h`). Everything aboard
+    is worked out in the ship's frame on the pad and carried up by
+    Frame⁻¹·Pose: the riders (the world renderer stands them on the deck
+    or the ramp and lifts them), and the pilot's first- and third-person
+    view (the pawn sweeps its cameras against the bay's walls,
+    `ShuttleBay::footprint` added to `AcPilotWalls` as turned slabs, then
+    carries the view), so the bay stays still round the pilot while the
+    ship banks. At the switch into the target region the ship leaves the
+    shown state for a moment: it is carried on from its last state in the
+    new world frame (up to 3 s) until the target region's copy comes, and
+    its actor is kept under the new number.
+  - **The acts** (`AcShuttleAct.h`), on E when nothing else takes it: on a
+    finished realm Landing Pad with no ship on it, "E · CALL THE DROPSHIP";
+    in the bay by the ramp post "E · OPEN THE RAMP" / "E · CLOSE THE RAMP";
+    at the console "E · TAKE OFF", which opens the world map as the flight
+    menu (FLY sends `Fly`). The core's refusals ("Someone is on the ramp",
+    "Close the ramp first", "Wait for the landing", "In flight") are the
+    prompt in the blocked tone and the key sends nothing; the server's
+    come back as notes (`FAcMmoClient::CallShuttle`, `Ramp`,
+    `ShuttleRefusal`). A Prospector driving its Mule works the buttons too.
+  - **The windshield's rain** (`M_AcWindshield`, docs/weather.md "The
+    Dropship's windshield"): the visor's water on the three panes in the
+    glass's own frame, two blades in tandem, the side panes never wiped,
+    driven by each ship's own `ac::Wipers`; the dashboard's WIPERS plate
+    shows them aboard. **No rain in the bay**: the ship's bay is a turned
+    shelter box (docs/weather.md "Shelter"): no streaks, no wet deck, the
+    visor dry and the rain heard through the hull in the bay; the ramp
+    is open sky.
+  - **The view out** is the world itself: the ground and the giant, the
+    sky and the weather, at the ship's height; the target region is made
+    ahead from `WorldMessage::flyingTo`. The flight's effects ride on the
+    ship: the lift jets under the nacelles, the lift-off's blast and
+    scorch, dust under it near the ground, the touch down's dust, cloud
+    streaks flung past in the dash, the pad's lamps alternating.
+  - **Sounds** (`FAcAudioRules::Shuttles`; Tools/AudioGen/shuttle.manifest.json):
+    each ship's engines a loop at the ship, in your ear and low-passed
+    aboard (as the rain through the Citadel's walls); the ramp's hydraulics
+    as it starts to move (`rampmove`), a clunk on each button (`buttonclunk`),
+    the lift-off's roar, the approach's retro burst and the touch down's
+    thud (F2's), its wipers heard aboard.
+  - **The flow** `-AcFlowTest=mmoferry` (AcMmoFerryFlowTest.cpp): call,
+    walk round the landed ship and up its ramp, "Close the ramp first" at
+    the console, close at the post, take off from the console's flight
+    menu, the lift, dash and approach seen through the windshield, the
+    switch into Cold Fork, open the ramp, walk out. `-AcMmoShots=DIR
+    -AcMmoShotsFerry -AcMmoWeather=rain` takes its pictures (`ferry-N-*`).
+    F2's cinematic flight (the camera chasing the ship, `mmofly`,
+    `-AcMmoShotsF2`) is gone.
 - The Mule model (H2) with the side load screen (room left, ore, MH), its
   hopper heap growing with the load, lamps, drive sounds.
 - HUD: "In the Mule: N ore, M MH" while driving or near it.
