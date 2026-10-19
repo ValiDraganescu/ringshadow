@@ -4,6 +4,7 @@
 
 #include "Defence.h"
 
+#include "AcShelter.h"
 #include "AcWeather.h"
 
 #include "AcDaylight.h"
@@ -277,6 +278,8 @@ void FAcAudioRules::Reset()
 	bCruising = false;
 	CruiseFade = 0.f;
 	DryHeard = -1e9;
+	bShelterWanted = false;
+	Indoors = 0.f;
 }
 
 void FAcAudioRules::Deposited(ac::Vec2 At) { OneShot("deposit", At, AcSound::DepositGain, EAcSoundPool::Deposit); }
@@ -737,7 +740,7 @@ void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAc
 	// The wind and the weather's rain beds: two layers each, the second
 	// half a loop on, panned apart. The wind rises in a storm; light rain
 	// gives way to the downpour as the rain gets heavier.
-	auto Bed = [&](const int64 (&Keys)[2], FName Name, float Volume)
+	auto Bed = [&](const int64 (&Keys)[2], FName Name, float Volume, float LowPassHz = 0.f)
 	{
 		if (Volume <= 0.f) return;
 		for (int32 K = 0; K < 2; ++K)
@@ -750,13 +753,18 @@ void FAcAudioRules::Loops(const ac::GameState& Shown, double Dt, std::vector<FAc
 			W.bAmbient = true;
 			W.Pan = K == 0 ? -AcSound::WindPan : AcSound::WindPan;
 			W.StartFraction = (K == 1 && Variants(Name) < 2) ? 0.5f : 0.f;
+			W.LowPassHz = LowPassHz;
 			Out.push_back(W);
 		}
 	};
 	const float Rain = static_cast<float>(FMath::Clamp(RainRate, 0.0, 1.0));
 	Bed(WindKeys, "wind", AcSound::WindGain * (1.f + AcSound::StormWindLift * static_cast<float>(Storminess)));
-	Bed(RainKeys, "rain", AcSound::RainGain * FMath::Clamp(Rain * 2.5f, 0.f, 1.f) * (1.f - 0.6f * FMath::SmoothStep(0.5f, 1.f, Rain)));
-	Bed(DownpourKeys, "downpour", AcSound::DownpourGain * FMath::SmoothStep(0.35f, 1.f, Rain));
+	// In the hall the rain is heard through the walls: quieter, dull.
+	Fade(Indoors, bShelterWanted ? 1.f : 0.f, AcSound::ShelterFadeSeconds, AcSound::ShelterFadeSeconds);
+	const float Walls = FMath::Lerp(1.f, AcSound::ShelterBedGain, Indoors);
+	const float Dull = Indoors > 0.f ? AcSound::ShelterLowPassHz * FMath::Pow(20000.f / AcSound::ShelterLowPassHz, 1.f - Indoors) : 0.f;
+	Bed(RainKeys, "rain", Walls * AcSound::RainGain * FMath::Clamp(Rain * 2.5f, 0.f, 1.f) * (1.f - 0.6f * FMath::SmoothStep(0.5f, 1.f, Rain)), Dull);
+	Bed(DownpourKeys, "downpour", Walls * AcSound::DownpourGain * FMath::SmoothStep(0.35f, 1.f, Rain), Dull);
 	// The ringshadow (J1): the drone from the warning, a little at first,
 	// swelling as the band's edge comes the last `ShadowDroneCells`, giving
 	// way under the band to the cold bed; the ore flaring near the ears.
@@ -1094,6 +1102,7 @@ void UAcAudioDirector::OnGameStarted(UAcSimSubsystem& Sim)
 		if (Pair.Value) Pair.Value->Stop();
 	}
 	LoopVoices.Reset();
+	LoopsFiltered.Reset();
 	LoopSounds.Reset();
 	Loops3D.Reset();
 	Brain.Reset();
@@ -1520,6 +1529,7 @@ void UAcAudioDirector::SyncLoops(const std::vector<FAcLoopWant>& Wants)
 		}
 		for (auto& V : LoopVoices) if (V.Value) V.Value->Stop();
 		LoopVoices.Reset();
+	LoopsFiltered.Reset();
 		LoopSounds.Reset();
 		Loops3D.Reset();
 		return;
@@ -1583,12 +1593,14 @@ void UAcAudioDirector::SyncLoops(const std::vector<FAcLoopWant>& Wants)
 			LoopVoices.Add(W.Key, C);
 			LoopSounds.Add(W.Key, {W.Name, W.Variant});
 			Loops3D.Remove(W.Key);
+			LoopsFiltered.Remove(W.Key);
 			if (Voice && Pilot)
 			{
 				Pilot->Apply(C, Voice.GetPtrOrNull());
 				Pilot->Log(W.Name, *Voice, Level);
 				Loops3D.Add(W.Key);
 			}
+			FilterLoop(C, W);
 			continue;
 		}
 		UAudioComponent* C = *Have;
@@ -1607,6 +1619,7 @@ void UAcAudioDirector::SyncLoops(const std::vector<FAcLoopWant>& Wants)
 			if (Voice) Loops3D.Add(W.Key);
 			else Loops3D.Remove(W.Key);
 		}
+		FilterLoop(C, W);
 		C->SetVolumeMultiplier(FMath::Max(bHeard ? Level : Volume, 0.f));
 	}
 	for (auto It = LoopVoices.CreateIterator(); It; ++It)
@@ -1617,7 +1630,22 @@ void UAcAudioDirector::SyncLoops(const std::vector<FAcLoopWant>& Wants)
 		if (It.Value()) It.Value()->Stop();
 		LoopSounds.Remove(It.Key());
 		Loops3D.Remove(It.Key());
+		LoopsFiltered.Remove(It.Key());
 		It.RemoveCurrent();
+	}
+}
+
+void UAcAudioDirector::FilterLoop(UAudioComponent* C, const FAcLoopWant& W)
+{
+	if (W.LowPassHz > 0.f)
+	{
+		C->SetLowPassFilterEnabled(true);
+		C->SetLowPassFilterFrequency(W.LowPassHz);
+		LoopsFiltered.Add(W.Key);
+	}
+	else if (LoopsFiltered.Remove(W.Key) > 0)
+	{
+		C->SetLowPassFilterEnabled(false);
 	}
 }
 
@@ -1670,6 +1698,7 @@ void UAcAudioDirector::OnFrame(const FAcFrame& Frame)
 	{
 		const ac::WeatherSample& W = Weather->Last();
 		Brain.Weather(W.rain, W.storm);
+		Brain.Sheltered(AcShelter::DrivenSheltered(this));
 		const double T = AAcWeather::WeatherTime(Sim->GameTime());
 		if (T < ThunderHeardTo || T - ThunderHeardTo > 30.0) ThunderHeardTo = T;
 		for (const ac::LightningStrike& S : Weather->Thunder(ThunderHeardTo, T)) Brain.Thunder(S.distanceKm, S.power);

@@ -497,6 +497,65 @@ bool FAcAudioWeatherTest::RunTest(const FString&)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcAudioShelterTest, "Autocraft.Audio.Rules.Shelter", Flags)
+bool FAcAudioShelterTest::RunTest(const FString&)
+{
+	// docs/weather.md "Shelter: no rain indoors": in the hall the rain beds
+	// fall to 40%, low-passed, over half a second; the wind and the thunder
+	// stay as they are; back out, open again.
+	FAcAudioRules R;
+	R.Variants = [](FName) { return 1; };
+	ac::GameState S;
+	S.players.resize(2);
+	auto Run = [&](const double Seconds)
+	{
+		std::vector<FAcLoopWant> Ls;
+		for (double T = 0; T < Seconds - 1e-9; T += 0.1)
+		{
+			Ls.clear();
+			R.Loops(S, 0.1, Ls);
+		}
+		return Ls;
+	};
+	auto Bed = [](const std::vector<FAcLoopWant>& Ls, FName Name) { return Loop(Ls, Name); };
+	R.Weather(0.8, 0.5);
+	const std::vector<FAcLoopWant> Out = Run(1.0);
+	const FAcLoopWant* Rain = Bed(Out, "rain");
+	const FAcLoopWant* Pour = Bed(Out, "downpour");
+	const FAcLoopWant* Wind = Bed(Out, "wind");
+	TestTrue(TEXT("out in the rain: both beds"), Rain && Pour && Wind);
+	if (!Rain || !Pour || !Wind) return false;
+	const float RainOut = Rain->Volume, PourOut = Pour->Volume, WindOut = Wind->Volume;
+	TestEqual(TEXT("out: the rain open"), Rain->LowPassHz, 0.f);
+
+	R.Sheltered(true);
+	const std::vector<FAcLoopWant> Half = Run(0.2);
+	TestTrue(TEXT("eased: between in a moment"), Bed(Half, "rain")->Volume < RainOut && Bed(Half, "rain")->Volume > RainOut * AcSound::ShelterBedGain + 1e-4f);
+	const std::vector<FAcLoopWant> In = Run(AcSound::ShelterFadeSeconds);
+	TestTrue(TEXT("in the hall: the rain at 40%"), FMath::IsNearlyEqual(Bed(In, "rain")->Volume, RainOut * AcSound::ShelterBedGain, 1e-4f));
+	TestTrue(TEXT("in the hall: the downpour at 40%"), FMath::IsNearlyEqual(Bed(In, "downpour")->Volume, PourOut * AcSound::ShelterBedGain, 1e-4f));
+	TestTrue(TEXT("in the hall: low-passed"), FMath::IsNearlyEqual(Bed(In, "rain")->LowPassHz, AcSound::ShelterLowPassHz, 1.f)
+		&& FMath::IsNearlyEqual(Bed(In, "downpour")->LowPassHz, AcSound::ShelterLowPassHz, 1.f));
+	TestTrue(TEXT("in the hall: the wind as it was"), FMath::IsNearlyEqual(Bed(In, "wind")->Volume, WindOut) && Bed(In, "wind")->LowPassHz == 0.f);
+	// The thunder: the same crack in the hall as out.
+	R.TakeCues();
+	R.Thunder(1.0, 1.0);
+	const std::vector<FAcSoundCue> CuesIn = R.TakeCues();
+	const FAcSoundCue* CrackIn = First(CuesIn, "crack");
+	const float CrackInVolume = CrackIn ? CrackIn->Volume : -1.f;
+
+	R.Sheltered(false);
+	const std::vector<FAcLoopWant> Back = Run(AcSound::ShelterFadeSeconds + 0.1);
+	TestTrue(TEXT("back out: the rain full"), FMath::IsNearlyEqual(Bed(Back, "rain")->Volume, RainOut, 1e-4f));
+	TestEqual(TEXT("back out: open"), Bed(Back, "rain")->LowPassHz, 0.f);
+	R.TakeCues();
+	R.Thunder(1.0, 1.0);
+	const std::vector<FAcSoundCue> CuesOut = R.TakeCues();
+	const FAcSoundCue* CrackOut = First(CuesOut, "crack");
+	TestTrue(TEXT("the thunder unchanged in the hall"), CrackOut && CrackInVolume > 0.f && FMath::IsNearlyEqual(CrackOut->Volume, CrackInVolume));
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcAudioMomentsTest, "Autocraft.Audio.Rules.Moments", Flags)
 bool FAcAudioMomentsTest::RunTest(const FString&)
 {

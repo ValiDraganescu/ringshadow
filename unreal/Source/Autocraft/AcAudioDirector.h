@@ -125,6 +125,13 @@ namespace AcSound
 	inline constexpr float RainGain = 0.7f;
 	inline constexpr float DownpourGain = 0.3f;
 	inline constexpr float StormWindLift = 0.7f;
+	/// In the hall (the driven unit sheltered, docs/weather.md "Shelter: no
+	/// rain indoors"): the rain beds at this much of their gain, low-passed
+	/// at this many Hz (a wall between the ears and the rain), the change
+	/// eased over this long. The thunder is left as it is.
+	inline constexpr float ShelterBedGain = 0.4f;
+	inline constexpr float ShelterLowPassHz = 1200.f;
+	inline constexpr float ShelterFadeSeconds = 0.5f;
 	/// A strike's thunder: a close one's crack, a far one's roll.
 	inline constexpr float ThunderGain = 1.1f;
 	inline constexpr float BoomGain = 1.0f;
@@ -300,6 +307,8 @@ struct FAcLoopWant
 	float StartFraction = 0.f;
 	/// The world around (wind, hum): the environment volume, not the effects'.
 	bool bAmbient = false;
+	/// Low-passed at this many Hz (the rain heard from the hall); 0: open.
+	float LowPassHz = 0.f;
 };
 
 /// Everything the Swift `AudioDirector` decides, with no audio in it.
@@ -364,6 +373,9 @@ public:
 	void Heal(bool bOn) { bHealing = bOn; }
 	/// The weather now (AAcWeather): the rain beds and the wind follow it.
 	void Weather(double Rain, double Storm) { RainRate = Rain; Storminess = Storm; }
+	/// The driven unit stands sheltered in the hall (AcShelter.h): the rain
+	/// beds fall to `ShelterBedGain`, low-passed, over `ShelterFadeSeconds`.
+	void Sheltered(bool bIn) { bShelterWanted = bIn; }
 	/// A lightning strike's thunder reaching the ears now: a crack within
 	/// 2 km, a roll further out, quieter with distance.
 	void Thunder(double DistanceKm, double Power);
@@ -475,6 +487,9 @@ private:
 	float HealFade = 0.f;
 	bool bHealing = false;
 	double RainRate = 0.0, Storminess = 0.0;
+	bool bShelterWanted = false;
+	/// 0 out in the rain, 1 in the hall (eased).
+	float Indoors = 0.f;
 	/// The moments: the ringshadow at the ears and its fades, the falls
 	/// heard (streaks started, booms due) and their hot craters.
 	FShadowHear Shadow;
@@ -606,6 +621,8 @@ private:
 	/// placed or started, `ac.AudioSkipSilent`).
 	bool HasDevice() const;
 	void SyncLoops(const std::vector<FAcLoopWant>& Wants);
+	/// A loop's low-pass on at `W.LowPassHz`, or off again.
+	void FilterLoop(UAudioComponent* C, const FAcLoopWant& W);
 	/// Where a sound at ground `P` plays from; while driving (and not at a
 	/// fixed pan) also its 3D voice (E7's `UAcPilotAudio`: volume factor,
 	/// low-pass, hall send).
@@ -654,6 +671,8 @@ private:
 	TMap<int64, TPair<FName, int32>> LoopSounds;
 	/// The loops playing as 3D voices round the pilot's ears (E7).
 	TSet<int64> Loops3D;
+	/// The loops whose low-pass is on (`FAcLoopWant::LowPassHz`).
+	TSet<int64> LoopsFiltered;
 	/// One-shots of looping waves (the weld's strike), stopped after one pass.
 	TArray<TPair<TWeakObjectPtr<UAudioComponent>, double>> StopAt;
 
