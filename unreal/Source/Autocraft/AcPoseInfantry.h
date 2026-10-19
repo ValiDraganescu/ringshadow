@@ -41,6 +41,19 @@ namespace AcPoseInfantry
 	/// (`Memory.LastShot`), the fork's round (`ForkMotion`, in the memory).
 	AUTOCRAFT_API void PoseProspector(const FAcPoseContext& C, FAcPose& P);
 
+	/// C4: the load held in the gripper is drawn this many times its built
+	/// size (the user's ruling after seeing 4x, docs/haul-and-ferry.md section 1).
+	inline constexpr double HeldLoadScale = 2.0;
+	/// Where the held load sits along the gripper (SceneKit x out of
+	/// `fork_root`, cells) at `Load` (0 to 1 of the pickup) and `Slide` (the
+	/// drop-off's slide): the built hold 0.27 pushed out as it grows, so its
+	/// back stays at the tines (a crystal pile's back is 0.117 behind its
+	/// centre, the MH canister's 0.083) and clear of the hull.
+	inline double HeldLoadX(const bool bHydrogen, const double Load, const double Slide)
+	{
+		return 0.27 + (HeldLoadScale - 1.0) * (bHydrogen ? 0.083 : 0.117) * Load + Slide;
+	}
+
 	/// What a Ranger carries: the Mini gun in place of the rifle, the Aegis
 	/// shield on its forearm (its side's upgrades).
 	struct FRangerArms

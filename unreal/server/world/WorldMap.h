@@ -1016,6 +1016,10 @@ public:
     /// from its door facing it; its id), `citadel door open|close` and
     /// `citadel man N|none` (the Door and Man requests).
     std::string devCitadel(const std::string& line);
+    /// Dev and the flow tests (C4, `carry ore|mh N`, as the seated pilot):
+    /// the pilot's Prospector holds a load of N ore or MH in its gripper
+    /// (`carry none` empties it), for the grab's pictures.
+    std::string devCarry(const std::string& line);
     /// Dev and the flow tests (C2, `dummy here [D]`, as the seated pilot): a
     /// complete Target Dummy of the realm D cells (20; 2 to 80) ahead of
     /// the pilot's unit (along its gun's aim when it mans one), on the

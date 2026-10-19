@@ -28,8 +28,8 @@ manager's, for the user to tune by feel.
 - **Wallet**: mined ore and MH go into the Mule and stay booked to the Mule
   until it is driven into a Citadel's hall; only then do they reach the
   wallet. The Hab Dome takes no unloads any more.
-- **Grab**: the ore or MH the Prospector holds in its gripper is drawn 4×
-  bigger than today.
+- **Grab**: the ore or MH the Prospector holds in its gripper is drawn 2×
+  bigger than before C4 (the user's ruling after seeing it 4×).
 - **Citadel gate**: the button by the entrance lowers the gate, but it can
   then be closed neither from outside nor from inside. It must close again,
   from both sides (the manager's ruling: the outside button closes it too,
@@ -105,7 +105,17 @@ The frontier pilots keep flying: the server presses the buttons for them.
 - The Mule model (H2) with the side load screen (room left, ore, MH), its
   hopper heap growing with the load, lamps, drive sounds.
 - HUD: "In the Mule: N ore, M MH" while driving or near it.
-- The held load in the gripper 4× bigger.
+- The held load in the gripper 2× bigger.
+  As built (c4-gate): `AcPoseInfantry::HeldLoadScale` (2) on the model
+  (`PoseProspector`) and in the first-person cockpit (`AcCockpitKinds`);
+  `HeldLoadX` pushes the load out along the gripper as it grows so its back
+  stays at the tines and clear of the hull (ore 0.117 cells further out, MH
+  0.083). Before and after: [art/models/prospector/c4-grab](../art/models/prospector/c4-grab)
+  (`*-3q`: the pose preview; `*-fp`, `*-tps`: the game by day,
+  `-AcFlowTest=mmocitadel -AcMmoShots=DIR -AcMmoShotsGrab -AcMmoClockHour=11`,
+  the load from the server's `carry ore|mh N` dev line). 4× was tried first:
+  in first person it covered the lower middle of the view up to the
+  crosshair, and the user ruled 2× on the model and in the cockpit alike.
 
 ## 5. Workers
 

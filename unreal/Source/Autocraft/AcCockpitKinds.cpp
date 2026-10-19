@@ -6,6 +6,7 @@
 #include "AcKindTable.h"
 #include "AcParticles.h"
 #include "AcPilotCamera.h"
+#include "AcPoseInfantry.h"
 #include "AcPoseNewKinds.h"
 #include "AcPoseVehicles.h"
 #include "AcSpace.h"
@@ -505,8 +506,9 @@ namespace
 			{
 				SetVisible(P, Load, F.Load >= 0.02);
 				FNode N(M, Load);
-				N.Pos = FVector(0.27 + F.Slide, 0.01, 0);
-				N.Scale = FVector(F.Load);
+				// C4: 2x, as on the model (AcPoseInfantry::HeldLoadScale).
+				N.Pos = FVector(AcPoseInfantry::HeldLoadX(F.bHydrogen, F.Load, F.Slide), 0.01, 0);
+				N.Scale = FVector(AcPoseInfantry::HeldLoadScale * F.Load);
 				Put(P, Load, N);
 			}
 			const int32 Arm = PartOf(M, TEXT("fork_arm")), Root = PartOf(M, TEXT("fork_root"));

@@ -234,6 +234,20 @@ TEST(door_opensAndClosesFromEitherSide) {
     EXPECT_TRUE(w.devCitadel("citadel door open") == "dev: citadel door open: refused: Too far from the door");
 }
 
+// C4's dev line for the grab's pictures: a load in the gripper, and out again.
+TEST(dev_carryPutsALoadInTheGripper) {
+    Hall h;
+    WorldMap& w = h.w;
+    EXPECT_TRUE(w.devCarry("carry ore 5") == "dev: carry ore 5");
+    EXPECT_EQ(drivenUnit(w, a)->carrying, int64_t(5));
+    EXPECT_TRUE(drivenUnit(w, a)->hydrogen == std::optional<bool>(false));
+    EXPECT_TRUE(w.devCarry("carry mh 3") == "dev: carry mh 3");
+    EXPECT_TRUE(drivenUnit(w, a)->hydrogen == std::optional<bool>(true));
+    EXPECT_TRUE(w.devCarry("carry none") == "dev: carry none");
+    EXPECT_EQ(drivenUnit(w, a)->carrying, int64_t(0));
+    EXPECT_TRUE(w.devCarry("carry gold 2").rfind("dev: carry: ", 0) == 0);
+}
+
 // A gun: taken from its station in the hall when free; refused outside, too
 // far from the station, when another pilot is at it, and when the pilot is
 // at a gun already; left with -1.

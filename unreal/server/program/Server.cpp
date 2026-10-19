@@ -211,6 +211,11 @@ std::vector<std::string> Server::devControl(const std::string& text) {
             said.push_back(world_.devCitadel(line));
             continue;
         }
+        // The gripper's load (WorldMap::devCarry, C4): `carry ore|mh N`, `carry none`.
+        if (line.rfind("carry", 0) == 0) {
+            said.push_back(world_.devCarry(line));
+            continue;
+        }
         // Practice (WorldMap::devDummy, C2): `dummy here [CELLS]`.
         if (line.rfind("dummy", 0) == 0) {
             said.push_back(world_.devDummy(line));

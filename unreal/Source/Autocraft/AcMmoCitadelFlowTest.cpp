@@ -41,6 +41,12 @@
 //             (c3-doorway-in.png), in the hall by the open door looking out
 //             (c3-hall-out.png), and the hall's floor (c3-floor.png); with
 //             -AcNoShelter the same named -before, the checks left out.
+//             With -AcMmoShots=DIR -AcMmoShotsGrab (C4; by day:
+//             -AcMmoClockHour=11): before the walk to the door, a load of
+//             5 in the gripper (the server's `carry` dev line), ore then MH,
+//             in first person (c4-grab-ore-fp.png, c4-grab-mh-fp.png) and
+//             in third person at the wheel's zoom 0.45 (c4-grab-ore-tps.png,
+//             c4-grab-mh-tps.png); then the gripper empty, first person.
 //
 // Run hidden in a game process (ringshadow-testing, "Flow tests"):
 //   uv run unreal/Tools/hidden_run.py --out DIR --headless -- -AcFlowTest=mmocitadel
@@ -108,7 +114,18 @@ namespace
 		bool bInside = false, bShelterChecked = false;
 		int32 Rain = 0;
 		double RainAt = -1;
+		/// -AcMmoShotsGrab: the next of its pictures, and when it began.
+		int32 Grab = 0;
+		double GrabAt = -1;
 	};
+	/// -AcMmoShotsGrab (C4): the held load's pictures.
+	struct FGrabShot
+	{
+		const TCHAR* Name;
+		bool bMh, bThird;
+	};
+	constexpr FGrabShot GrabShots[] = {{TEXT("c4-grab-ore-fp"), false, false}, {TEXT("c4-grab-ore-tps"), false, true},
+		{TEXT("c4-grab-mh-fp"), true, false}, {TEXT("c4-grab-mh-tps"), true, true}};
 	/// -AcMmoShotsC3 at the gun: each picture's pitch (degrees), name, and
 	/// whether it is seen from the camera beside the bartizan.
 	struct FC3Shot
@@ -132,7 +149,8 @@ namespace
 	{
 		FString Dir;
 		const bool bWanted = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsTps"))
-			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC3")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRain"));
+			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC3")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRain"))
+			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsGrab"));
 		if (!bWanted || !FParse::Value(FCommandLine::Get(), TEXT("AcMmoShots="), Dir) || Dir.IsEmpty())
 		{
 			return false;
@@ -260,6 +278,7 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 	const bool bC3 = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC3"));
 	const bool bPictures = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")) || bTps || bC3;
 	const bool bRainShots = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRain"));
+	const bool bGrab = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsGrab"));
 	// -AcNoShelter: the pictures before the shelter (the rain everywhere).
 	auto RainPicture = [](const TCHAR* Name) { return Picture(*FString::Printf(TEXT("%s%s"), Name, AcShelter::On() ? TEXT("") : TEXT("-before"))); };
 	auto Face = [&](const ac::Vec2 To) {
@@ -306,6 +325,43 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 	switch (T.Phase)
 	{
 	case 2:
+		// -AcMmoShotsGrab (C4): a load in the gripper (the server's `carry`
+		// line), ore then MH, each in first person and in third person.
+		if (bGrab && Hall.Grab < int32(UE_ARRAY_COUNT(GrabShots)))
+		{
+			const FGrabShot& G = GrabShots[Hall.Grab];
+			if (Hall.GrabAt < 0)
+			{
+				Pilot->SetTestInput(FVector2D::ZeroVector, Pilot->Yaw());
+				Mmo->DevClock(G.bMh ? TEXT("carry mh 5") : TEXT("carry ore 5"));
+				if (Pilot->Eye().bThirdPerson != G.bThird) Pilot->ToggleView();
+				if (G.bThird) Pilot->SetChaseZoom(0.45f, true);
+				Hall.GrabAt = Now;
+				return;
+			}
+			if (Now - Hall.GrabAt < 2.0) return;
+			Check(U->carrying > 0 && U->hydrogen.value_or(false) == G.bMh, FString::Printf(TEXT("%s in the gripper for %s"), G.bMh ? TEXT("MH") : TEXT("ore"), G.Name));
+			Picture(G.Name);
+			Hall.Grab += 1;
+			Hall.GrabAt = -1;
+			T.PhaseAt = Now;
+			if (Hall.Grab == int32(UE_ARRAY_COUNT(GrabShots)))
+			{
+				// (The last picture a frame or more on.)
+				Hall.GrabAt = Now;
+			}
+			return;
+		}
+		if (bGrab && Hall.Grab == int32(UE_ARRAY_COUNT(GrabShots)))
+		{
+			if (Now - Hall.GrabAt < 1.0) return;
+			Mmo->DevClock(TEXT("carry none"));
+			if (Pilot->Eye().bThirdPerson) Pilot->ToggleView();
+			Pilot->SetChaseZoom(1.f, true);
+			Hall.Grab += 1;
+			T.PhaseAt = Now;
+			return;
+		}
 		// The door shut, a picture of it from out on the field, then to the doorstep.
 		// (-AcMmoShotsTps's walk to a rock leaves the apron.)
 		if (!Hall.bShot && Pictures() && Hall.Tps <= 2 * int32(UE_ARRAY_COUNT(TpsZooms)))

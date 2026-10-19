@@ -463,7 +463,9 @@ namespace AcPoseInfantry
 			if (Load != INDEX_NONE)
 			{
 				P.Visible[Load] = F.Load >= 0.02;
-				P.Local[Load] = Sk(FVector(ForkHold.X + F.Slide, ForkHold.Y, ForkHold.Z), FQuat::Identity, FVector(F.Load));
+				// C4: drawn 2x its built size, pushed out to keep its back at the tines.
+				P.Local[Load] = Sk(FVector(HeldLoadX(F.bHydrogen, F.Load, F.Slide), ForkHold.Y, ForkHold.Z), FQuat::Identity,
+					FVector(HeldLoadScale * F.Load));
 			}
 			const int32 Arm = Parts.ForkArm.Get(M), Root = Parts.ForkRoot.Get(M);
 			if (Arm != INDEX_NONE && Root != INDEX_NONE)

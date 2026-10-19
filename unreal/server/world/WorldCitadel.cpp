@@ -1,7 +1,7 @@
 // The Citadel's interior in a world (WorldMap.h, C1; docs/citadel-interior.md):
 // the door and the corner guns asked for by a pilot, the realm's Citadels
 // grown in place on load (schema 27), and the dev lines for the flow tests
-// (C2: a Target Dummy ahead).
+// (C2: a Target Dummy ahead; C4: a load in the gripper).
 // The door, the shelter and the guns themselves are the core's
 // (Simulation+Citadel.members.h).
 
@@ -118,6 +118,29 @@ std::vector<std::string> WorldMap::adoptCitadels(size_t r) {
                                " at " + where(b.position) + ": left");
     }
     return said;
+}
+
+std::string WorldMap::devCarry(const std::string& line) {
+    std::istringstream in(line);
+    std::string word, what;
+    long long n = 0;
+    in >> word >> what >> n;
+    if (!world_ || pilots_.empty()) return "dev: carry: no world, or no pilot";
+    auto& [pilot, p] = *devPilot();
+    if (p.flight) return "dev: carry: in flight";
+    Simulation& sim = regions_[p.region]->simulation();
+    const auto me = p.unit ? sim.unitIndex(*p.unit) : std::nullopt;
+    if (!me || sim.state.units[size_t(*me)].kind != UnitKind::prospector) return "dev: carry: the pilot drives no Prospector";
+    Unit& u = sim.state.units[size_t(*me)];
+    if (what == "none") {
+        u.carrying = 0;
+        u.hydrogen = std::nullopt;
+        return "dev: carry none";
+    }
+    if ((what != "ore" && what != "mh") || n <= 0) return "dev: carry: '" + line + "' is not ore|mh N or none";
+    u.carrying = n;
+    u.hydrogen = what == "mh";
+    return "dev: carry " + what + " " + std::to_string(n);
 }
 
 std::string WorldMap::devCitadel(const std::string& line) {
