@@ -5,7 +5,8 @@
 // 2 s of forward input at 60 Hz, and the mirror's Prospector where the server
 // moved it. One isolated moment of a few seconds, in real time; the server
 // stops at the end. CrossEdgeEast drives the Prospector east over the start
-// region's edge and FlyToPad flies it from the start pad to Cold Fork's pad:
+// region's edge and FlyToPad flies it in the walk-in Dropship (C4) from the
+// start pad to Cold Fork's pad:
 // each checks the client's mirror is the new region's, driving it there
 // (about 30 s and 10 s). Run hidden:
 //   UnrealEditorBG.app/.../UnrealEditor Autocraft.uproject -nullrhi -unattended -nosplash -nosound
@@ -439,22 +440,40 @@ bool FAcMmoFlyTest::RunTest(const FString&)
 	const int64 HydrogenWas = Client.HydrogenNow().value_or(-1);
 	TestTrue(TEXT("at least 100 MH in the wallet"), HydrogenWas >= 100);
 	TestFalse(TEXT("a region file's pad is no Landing Pad"), Client.Fly(TEXT("cold-fork"), TEXT("landing"), &Why));
+	// C4: not from the pad itself: aboard the walk-in Dropship, at its console.
+	if (Client.Fly(TEXT("cold-fork"), TEXT("Landing Pad 1"), &Why))
+	{
+		RunUntil(Client, [&] { return !Client.FlightRefusal().IsEmpty() || Client.FlyingTo() != nullptr; }, 5.0);
+		TestTrue(FString::Printf(TEXT("from the pad the flight is refused: board first (%s)"), *Client.FlightRefusal()),
+			!Client.FlyingTo() && Client.FlightRefusal().Contains(TEXT("Board")));
+	}
+	// A Dropship on the pad, the Prospector in its bay at the take-off button, the ramp shut.
+	FFileHelper::SaveStringToFile(TEXT("ferry board\n"), *Control);
+	auto Aboard = [&] {
+		const ac::net::Mirror* M = Client.Mirror();
+		const ac::Unit* U = M && M->driven() ? M->unit(*M->driven()) : nullptr;
+		return U ? M->simulation().aboard(*U) : nullptr;
+	};
+	const bool bBoarded = RunUntil(Client, [&] { const ac::Shuttle* S = Aboard(); return S && S->grounded() && S->ramp.open <= 0; }, 5.0);
+	TestTrue(TEXT("aboard the Dropship on the pad, its ramp shut"), bBoarded);
 	const bool bAsked = Client.Fly(TEXT("cold-fork"), TEXT("Landing Pad 1"), &Why);
 	TestTrue(FString::Printf(TEXT("the flight asked for (%s)"), *Why), bAsked);
 	if (!bAsked) return false;
 	const bool bLifted = RunUntil(Client, [&] { return Client.FlyingTo() != nullptr || !Client.FlightRefusal().IsEmpty(); }, 5.0);
-	TestTrue(FString::Printf(TEXT("aboard (%s)"), *Client.FlightRefusal()), bLifted && Client.FlyingTo());
+	TestTrue(FString::Printf(TEXT("lifting off (%s)"), *Client.FlightRefusal()), bLifted && Client.FlyingTo());
 	if (Client.FlyingTo()) TestEqual(TEXT("flying to Cold Fork"), Utf(Client.FlyingTo()->id), FString(TEXT("cold-fork")));
-	TestTrue(TEXT("travelling: no unit to drive"), Client.Travelling());
+	TestTrue(TEXT("still driving the Prospector in the bay"), !Client.Travelling() && Client.Driven());
 	const double CalledAt = FPlatformTime::Seconds();
-	// The approach: in Cold Fork, nothing driven yet.
+	// The switch into Cold Fork in the dash: seamless, still driving, still flying.
 	const bool bSwitched = RunUntil(Client, [&] { return Client.Phase() == FAcMmoClient::EPhase::Failed || Client.Visit() > VisitWas; }, 30.0);
-	TestTrue(TEXT("into Cold Fork at the approach"), bSwitched && Client.Visit() > VisitWas);
-	TestTrue(TEXT("still aboard at the approach"), Client.Travelling() && Client.FlyingTo());
-	TestTrue(TEXT("the approach's change seamless"), Client.LastWasSeamless());
+	TestTrue(TEXT("into Cold Fork in flight"), bSwitched && Client.Visit() > VisitWas);
+	TestTrue(TEXT("still aboard after the switch"), Client.FlyingTo() != nullptr);
+	TestTrue(TEXT("the switch seamless"), Client.LastWasSeamless());
 	const bool bLanded = RunUntil(Client, [&] {
-		return Client.Phase() == FAcMmoClient::EPhase::Failed || (!Client.Travelling() && Client.Driven());
-	}, 15.0);
+		if (Client.Phase() == FAcMmoClient::EPhase::Failed) return true;
+		const ac::Shuttle* S = Aboard();
+		return !Client.Travelling() && Client.Driven() && !Client.FlyingTo() && S && S->grounded();
+	}, 30.0);
 	if (!bLanded || Client.Phase() == FAcMmoClient::EPhase::Failed)
 	{
 		AddError(FString::Printf(TEXT("did not land: phase %d, %s, visit %lld"), (int32)Client.Phase(), *Client.Message(), (long long)Client.Visit()));

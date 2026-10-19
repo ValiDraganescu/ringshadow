@@ -453,9 +453,10 @@ public:
 	const ac::net::WorldMessage::Region* Here() const;
 	/// In flight: the region it flies to.
 	const ac::net::WorldMessage::Region* FlyingTo() const;
-	/// In flight, or come into a region whose first snapshot has not shown
-	/// the driven unit yet: the pilot keeps its seat, nothing to drive.
-	bool Travelling() const { return FlyingTo() != nullptr || bArriving; }
+	/// Come into a region whose first snapshot has not shown the driven unit
+	/// yet: the pilot keeps its seat, nothing to drive. (A flight is not:
+	/// since C4 the pilot rides the walk-in Dropship driving its Prospector.)
+	bool Travelling() const { return bArriving; }
 	/// M2: the compass's target picked on the world map (a mission or a
 	/// blueprint site): its region id, its ground point there, its label and
 	/// colour, and what it is ("mission:7", a site's id; the map rings it).
