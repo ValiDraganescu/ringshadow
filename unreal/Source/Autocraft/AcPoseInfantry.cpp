@@ -347,25 +347,8 @@ namespace AcPoseInfantry
 		return N;
 	}
 
-	double BuildingRadius(const ac::StructureKind Kind)
-	{
-		switch (Kind)
-		{
-		case ac::StructureKind::citadel: return 2.5;
-		case ac::StructureKind::garrison:
-		case ac::StructureKind::bastion:
-		case ac::StructureKind::derrick:
-		case ac::StructureKind::foundry:
-		case ac::StructureKind::spacedock: return 1.5;
-		case ac::StructureKind::lab:
-		case ac::StructureKind::habDome:
-		case ac::StructureKind::sentinel:
-		case ac::StructureKind::gatling: return 1.0;
-		case ac::StructureKind::dummy: return ac::Rules::radius(Kind);
-		default: break;
-		}
-		return 1.5;
-	}
+	/// The footprint's (C1, C5: grown in the MMO).
+	double BuildingRadius(const ac::StructureKind Kind) { return ac::Rules::radius(Kind); }
 
 	double RangerFoldError(const FAcModelInfo& M)
 	{

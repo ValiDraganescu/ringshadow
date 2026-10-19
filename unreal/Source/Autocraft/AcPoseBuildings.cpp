@@ -169,19 +169,8 @@ namespace
 	const FName Steam(TEXT("AcSteam"));
 
 	/// The radius `GameScene.makeBuilding` gives the weld (:363-420).
-	double WeldRadius(const ac::StructureKind K)
-	{
-		switch (K)
-		{
-		case ac::StructureKind::citadel: return ac::Rules::radius(K);
-		case ac::StructureKind::habDome:
-		case ac::StructureKind::lab:
-		case ac::StructureKind::sentinel:
-		case ac::StructureKind::gatling: return 1.0;
-		case ac::StructureKind::dummy: return ac::Rules::radius(K);
-		default: return 1.5;
-		}
-	}
+	/// The footprint's (C5: grown in the MMO).
+	double WeldRadius(const ac::StructureKind K) { return ac::Rules::radius(K); }
 
 	bool Near(const ac::Vec2 A, const ac::Vec2 B, const double R)
 	{

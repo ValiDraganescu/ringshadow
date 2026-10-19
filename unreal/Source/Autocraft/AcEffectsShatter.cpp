@@ -52,17 +52,8 @@ namespace AcEffectsShatter
 		S.bBuilding = true;
 		S.Ring = 3;
 		S.Height = AcPose::BuildingHeight(Kind);
-		// GameScene.makeBuilding's radius.
-		switch (Kind)
-		{
-		case ac::StructureKind::citadel: S.Radius = ac::Rules::radius(Kind); break;
-		case ac::StructureKind::lab:
-		case ac::StructureKind::habDome:
-		case ac::StructureKind::sentinel:
-		case ac::StructureKind::gatling: S.Radius = 1; break;
-		case ac::StructureKind::dummy: S.Radius = ac::Rules::radius(Kind); break;
-		default: S.Radius = 1.5; break;
-		}
+		// GameScene.makeBuilding's radius: the footprint's (C5: grown in the MMO).
+		S.Radius = ac::Rules::radius(Kind);
 		S.Chunks = int32(10 + S.Radius * 7);
 		static TMap<int32, FString> Names;
 		FString& Name = Names.FindOrAdd(int32(Kind));

@@ -34,8 +34,10 @@ public:
 	/// The hologram of the catalog model `Model` standing at `At` (world cm,
 	/// the ground point: lifted 0.02 cell as Swift), turned `Yaw` degrees
 	/// about +Z, on a plate `Radius` cells out; `bOk` green, else red;
-	/// `Time` (seconds) drives the pulse. False if the model is unknown.
-	bool Show(FName Model, const FVector& At, double Yaw, double Radius, bool bOk, double Time);
+	/// `Time` (seconds) drives the pulse; the model stretched by `Scale` (a
+	/// building's `AcPose::BuildingScale`, C5). False if the model is unknown.
+	bool Show(FName Model, const FVector& At, double Yaw, double Radius, bool bOk, double Time,
+		const FVector& Scale = FVector::OneVector);
 	void Hide();
 	bool IsShown() const { return bShown; }
 	FName Model() const { return Key; }

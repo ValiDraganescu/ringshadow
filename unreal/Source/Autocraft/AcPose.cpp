@@ -104,28 +104,32 @@ namespace AcPose
 		return TEXT("citadel");
 	}
 
-	double BuildingHeight(const ac::StructureKind Kind)
+	double BuildingHeight(const ac::StructureKind Kind) { return ac::Rules::height(Kind); }
+
+	FVector BuildingScale(const ac::StructureKind Kind)
 	{
-		// GameScene.makeBuilding (GameScene.swift:363); Models.labHeight 1.9;
-		// the Citadel the core's (C1: 9.0 with the hall, deck 7 and the
-		// tower over it, docs/citadel-interior.md §1; 4.6 without).
+		// The footprint's half side and the height each model was made for
+		// (GameScene.makeBuilding, GameScene.swift:363; Models.labHeight
+		// 1.9): the strategy game's sizes. The Citadel's model is its hall
+		// (citadel.py) and the dummy's its post (dummy.py): their own size.
+		double R = 1.5, H = 2.0;
 		switch (Kind)
 		{
-		case ac::StructureKind::citadel: return ac::Rules::height(Kind);
-		case ac::StructureKind::habDome: return 1.2;
-		case ac::StructureKind::garrison: return 2.5;
-		case ac::StructureKind::bastion: return 1.4;
-		case ac::StructureKind::derrick: return 2.5;
-		case ac::StructureKind::foundry: return 2.4;
-		case ac::StructureKind::spacedock: return 3.2;
-		case ac::StructureKind::lab: return 1.9;
-		case ac::StructureKind::sentinel: return 1.7;
-		case ac::StructureKind::gatling: return 1.3;
-		case ac::StructureKind::landingPad: return 0.18;
-		// C2: the Target Dummy, its post and plate (the core's height).
-		case ac::StructureKind::dummy: return ac::Rules::height(Kind);
+		case ac::StructureKind::citadel:
+		case ac::StructureKind::dummy: return FVector::OneVector;
+		case ac::StructureKind::habDome: R = 1.0; H = 1.2; break;
+		case ac::StructureKind::garrison: H = 2.5; break;
+		case ac::StructureKind::bastion: H = 1.4; break;
+		case ac::StructureKind::derrick: H = 2.5; break;
+		case ac::StructureKind::foundry: H = 2.4; break;
+		case ac::StructureKind::spacedock: H = 3.2; break;
+		case ac::StructureKind::lab: R = 1.0; H = 1.9; break;
+		case ac::StructureKind::sentinel: R = 1.0; H = 1.7; break;
+		case ac::StructureKind::gatling: R = 1.0; H = 1.3; break;
+		case ac::StructureKind::landingPad: H = 0.18; break;
 		}
-		return 2.0;
+		const double Across = ac::Rules::radius(Kind) / R;
+		return FVector(Across, Across, ac::Rules::height(Kind) / H);
 	}
 
 	double ConstructionSink(const ac::Structure& S)
@@ -240,6 +244,6 @@ namespace AcPose
 		// Buildings face +Z in SceneKit (UE +Y) and are never turned; the
 		// body rises out of the ground as it is built (`animate` :489).
 		const double Y = C.Ground(S.position) + (S.complete() ? 0.0 : ConstructionSink(S));
-		P.Placement = FTransform(FQuat::Identity, AcSpace::ToWorld(S.position, Y));
+		P.Placement = FTransform(FQuat::Identity, AcSpace::ToWorld(S.position, Y), BuildingScale(S.kind));
 	}
 }

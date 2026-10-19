@@ -34,8 +34,9 @@ bool FAcLifeBarsSizeTest::RunTest(const FString&)
 	TestTrue(TEXT("a unit's bar is at least 0.8 wide"), AcLifeBars::Width(ac::UnitKind::ranger) >= 0.8);
 	TestTrue(TEXT("Citadel bar 1.7 r"),
 		FMath::IsNearlyEqual(AcLifeBars::Width(ac::StructureKind::citadel), ac::Rules::radius(ac::StructureKind::citadel) * 1.7, 1e-12));
-	TestEqual(TEXT("Citadel model radius"), AcLifeBars::BuildingRadius(ac::StructureKind::citadel), 2.5);
-	TestEqual(TEXT("Lab model radius"), AcLifeBars::BuildingRadius(ac::StructureKind::lab), 1.0);
+	// C5: every building's bar sits on its footprint, grown in the MMO.
+	TestEqual(TEXT("Citadel model radius"), AcLifeBars::BuildingRadius(ac::StructureKind::citadel), ac::Rules::radius(ac::StructureKind::citadel));
+	TestEqual(TEXT("Lab model radius"), AcLifeBars::BuildingRadius(ac::StructureKind::lab), ac::Rules::radius(ac::StructureKind::lab));
 	return true;
 }
 

@@ -134,7 +134,7 @@ void AAcHologram::Build(const FName Model)
 }
 
 bool AAcHologram::Show(const FName Model, const FVector& At, const double Yaw, const double Radius, const bool bOk,
-	const double Time)
+	const double Time, const FVector& Scale)
 {
 	if (Key != Model) Build(Model);
 	if (Parts.Num() == 0)
@@ -144,6 +144,7 @@ bool AAcHologram::Show(const FName Model, const FVector& At, const double Yaw, c
 	}
 	const double Cm = AcSpace::CmPerCell;
 	Body->SetWorldLocationAndRotation(At + FVector(0, 0, 0.02 * Cm), FRotator(0, Yaw, 0));
+	Body->SetWorldScale3D(Scale);
 	const FLinearColor C = bOk ? FAcHudStyle::World(0.25, 1, 0.45) : FAcHudStyle::World(1, 0.22, 0.15);
 	const double Pulse = 0.85 + 0.15 * std::sin(Time * 5);
 	if (Glass)
