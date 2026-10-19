@@ -65,8 +65,9 @@ std::optional<std::string> Simulation::rampRefusal(const Shuttle& s, const Unit&
     for (const Unit& v : state.units) {
         if (!onFoot(v)) continue;
         const Vec2 w = ShuttleBay::local(s, v.position);
-        // On the ramp's strip, or in the opening it shuts.
-        if (ShuttleBay::onRamp(w, Rules::radius(v.kind))) return std::string("Someone is on the ramp");
+        // On the ramp's strip, or in the opening it shuts: its walk's circle
+        // (`pilotCanStand`'s radius) past the opening's edge.
+        if (ShuttleBay::onRamp(w, Rules::radius(v.kind) * 0.8)) return std::string("Someone is on the ramp");
     }
     return std::nullopt;
 }

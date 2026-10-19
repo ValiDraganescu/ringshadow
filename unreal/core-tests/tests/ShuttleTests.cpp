@@ -162,6 +162,9 @@ TEST(shuttle_rampButtonAndItsRefusals) {
     addUnitAt(b, kPad + Vec2(-3.4, 0.2));
     EXPECT_TRUE(length(localOf(b, b.pilot) - post) <= ShuttleBay::reach);
     EXPECT_EQ(b.sim.ramp(b.pilot, b.ship, false).value_or(""), std::string("Someone is on the ramp"));
+    // At the post, by the opening, it is not on the ramp itself.
+    Bay atPost = bayScene(kPad + Vec2(-2.15, -0.35));
+    EXPECT_TRUE(!atPost.sim.rampRefusal(*atPost.sim.shuttle(atPost.ship), unitOf(atPost.sim, atPost.pilot), false));
     // Clear, it shuts over its seconds; on the ground it opens again.
     Bay c = bayScene(kPad + Vec2(-1.6, -0.3));
     EXPECT_TRUE(!c.sim.ramp(c.pilot, c.ship, false));
