@@ -576,7 +576,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		if (Run.Leg == 0) Drive(ac::Vec2(Local.x - 2.0, Side), 0.0);
 		else if (Run.Leg == 1) Drive(ac::Vec2(Foot - 5.0, Side), 0.0);
 		else if (Run.Leg == 2 && (FMath::Abs(Local.y) > 0.25 || Local.x < Foot - 1.0)) Drive(ac::Vec2(FMath::Max(Local.x + 3.0, Foot - 3.5), 0.0), 0.0);
-		else if (Local.x < 0.4) Drive(ac::Vec2(FMath::Max(Local.x + 3.0, Foot), 0.0), 0.0), Run.Leg = 3;
+		else if (Local.x < -0.5) Drive(ac::Vec2(FMath::Max(Local.x + 3.0, Foot), 0.0), 0.0), Run.Leg = 3;
 		else bIn = true;
 		if (bIn)
 		{
