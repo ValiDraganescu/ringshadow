@@ -306,6 +306,9 @@ private:
 	/// C2: `mmopractice` (the build wheel, the target dummy, the gun's
 	/// rounds): AcMmoPracticeFlowTest.cpp.
 	void TickMmoPracticeFlow(const FString& Step);
+	/// C4: `mmomule` (the Mule bought at a Foundry, filled at its hopper,
+	/// driven into the Citadel's hall to book its load): AcMmoMuleFlowTest.cpp.
+	void TickMmoMuleFlow(const FString& Step);
 	/// A key through the flow's key processor, as the player presses it.
 	bool PressFlowKey(const struct FKey& Key);
 	/// U2: `mmosettings` (the Settings page from the home screen and the

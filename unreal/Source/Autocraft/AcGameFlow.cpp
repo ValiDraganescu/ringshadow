@@ -2180,6 +2180,11 @@ void UAcGameFlowSubsystem::TickFlowTest()
 		TickMmoPracticeFlow(Step);
 		return;
 	}
+	if (Step == TEXT("mmomule"))
+	{
+		TickMmoMuleFlow(Step);
+		return;
+	}
 	if (Step == TEXT("mmoshots"))
 	{
 		TickMmoShots();
