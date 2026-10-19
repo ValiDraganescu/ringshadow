@@ -50,8 +50,8 @@ struct AUTOCRAFTCORE_API Act {
     /// The Mule's perch (the levers and the rail at its front) and its hopper.
     static Block perch(const Unit& mule);
     static Block hopper(const Unit& mule);
-    /// The walk-in Dropship's ramp post's button and its console's take-off
-    /// button, in the ship's frame (heights from the landed ship's ground),
+    /// The walk-in Dropship's ramp post (its head: the button and the lamps
+    /// over it) and its console's take-off button, in the ship's frame (heights from the landed ship's ground),
     /// and in the world's.
     static Block rampPostLocal();
     static Block takeOffLocal();

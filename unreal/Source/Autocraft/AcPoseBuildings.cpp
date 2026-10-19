@@ -58,7 +58,7 @@ namespace AcBuildingPose
 		P.Local[I].SetTranslation(FVector(AcSpace::ToCm(At.x), AcSpace::ToCm(At.y), 0.0) * Keep);
 		P.Local[I].SetScale3D(Keep);
 		P.Visible[I] = bLive;
-		Lamp(P, Button.Get(C.Model), !bLive ? 0.05 : AcActPick::Lit() == S.id ? 3.0 : 1.0, 1.0);
+		Lamp(P, Button.Get(C.Model), !bLive ? 0.05 : AcActPick::Lit() == S.id ? 1.8 : 1.0, 1.0);
 	}
 
 	void SetPosition(FAcPose& P, const int32 Part, const double X, const double Y, const double Z)

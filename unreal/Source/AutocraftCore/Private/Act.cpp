@@ -110,7 +110,14 @@ Block Act::perch(const Unit& mule) { return onMule(mule, Mule::perchLocal, Vec2(
 
 Block Act::hopper(const Unit& mule) { return onMule(mule, Mule::hopperLocal, Vec2(0.75, 0.75), 0.6, Mule::rim + 0.15); }
 
-Block Act::rampPostLocal() { return button(ShuttleBay::rampButton, 0.2); }
+Block Act::rampPostLocal() {
+    // The post's head: its button and the lamps over it (a look from above
+    // meets the lamps' housing first).
+    Block b = button(ShuttleBay::rampButton, 0.2);
+    b.z0 = ShuttleBay::rampButton.z - 0.25;
+    b.z1 = ShuttleBay::rampButton.z + 0.5;
+    return b;
+}
 Block Act::takeOffLocal() { return button(ShuttleBay::takeOffButton, 0.2); }
 Block Act::rampPost(const Shuttle& s) { return inWorld(s, rampPostLocal()); }
 Block Act::takeOff(const Shuttle& s) { return inWorld(s, takeOffLocal()); }

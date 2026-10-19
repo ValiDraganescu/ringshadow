@@ -48,7 +48,7 @@ the buildings' and the ship's sizes:
 | Mule | "E · CLIMB ON" / "E · FILL THE MULE" | its perch (the rail and levers at its front) and its hopper (`perch`, `hopper`) |
 | Foundry | "E · BUY MULE · 600 ORE · 150 MH" | the call post's button beside its door (`foundryPost`) |
 | Landing Pad | "E · CALL THE DROPSHIP" | the call post's button off its front-right corner (`padPost`) |
-| Dropship | "E · OPEN THE RAMP" / "E · CLOSE THE RAMP" / "E · TAKE OFF" | the ramp post's button and the console's take-off button, in the ship's frame (`rampPostLocal`, `takeOffLocal`), in its bay or riding it |
+| Dropship | "E · OPEN THE RAMP" / "E · CLOSE THE RAMP" / "E · TAKE OFF" | the ramp post's head (its button and the lamps over it) and the console's take-off button, in the ship's frame (`rampPostLocal`, `takeOffLocal`), in its bay or riding it |
 | Demolish hold | "HOLD E · DEMOLISH …" | no box: the building the crosshair hits |
 | Climb off | "E · CLIMB OFF" | driving a Mule, nothing else aimed |
 

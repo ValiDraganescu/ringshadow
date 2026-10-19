@@ -74,6 +74,8 @@ namespace
 		double Settled = -1;
 		/// The stages seen in flight (pictures taken once each).
 		bool bLiftShot = false, bDashShot = false, bApproachShot = false;
+		/// The call post pictured (first person).
+		bool bPostShot = false;
 		/// The target pad's region, seen in flight.
 		bool bFlew = false;
 		/// Since when nothing is driven (the region switch in flight).
@@ -283,9 +285,20 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		if (Pad) Pilot->TestLookAtAct(AcActPick::EKind::Call, Pad->id);
 		if (Act && Act->Kind == AcActPick::EKind::Call && !Act->Why && Mmo->HydrogenNow().value_or(0) >= 100 && Settle(1.0))
 		{
-			Check(Prompt == TEXT("E · CALL THE DROPSHIP"), FString::Printf(TEXT("ferry: at the call post the prompt calls the Dropship (\"%s\")"), *Prompt));
+			// The post in first person (the third person's Prospector hides
+			// it), then back to third person, the crosshair on it again.
+			if (!Run.bPostShot)
+			{
+				FirstPerson(true);
+				if (Now - Run.Settled < 2.0) return;
+				Check(Prompt == TEXT("E · CALL THE DROPSHIP"), FString::Printf(TEXT("ferry: at the call post, first person, the prompt calls the Dropship (\"%s\")"), *Prompt));
+				Picture(TEXT("ferry-0-call-post"));
+				Run.bPostShot = true;
+				return;
+			}
 			FirstPerson(false);
-			Picture(TEXT("ferry-0-call-post"));
+			if (Now - Run.Settled < 3.5) return;
+			Check(Prompt == TEXT("E · CALL THE DROPSHIP"), FString::Printf(TEXT("ferry: at the call post the prompt calls the Dropship (\"%s\")"), *Prompt));
 			Press();
 			Advance();
 		}
