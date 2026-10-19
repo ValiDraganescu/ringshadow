@@ -126,7 +126,8 @@ namespace AcPose
 		case ac::StructureKind::lab: R = 1.0; H = 1.9; break;
 		case ac::StructureKind::sentinel: R = 1.0; H = 1.7; break;
 		case ac::StructureKind::gatling: R = 1.0; H = 1.3; break;
-		case ac::StructureKind::landingPad: H = 0.18; break;
+		// landing_pad.py: made at 11x11 (C5), its size the Dropship's.
+		case ac::StructureKind::landingPad: R = 5.5; H = 0.18; break;
 		}
 		const double Across = ac::Rules::radius(Kind) / R;
 		return FVector(Across, Across, ac::Rules::height(Kind) / H);

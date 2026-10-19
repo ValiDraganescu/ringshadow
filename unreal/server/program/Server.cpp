@@ -221,6 +221,11 @@ std::vector<std::string> Server::devControl(const std::string& text) {
             said.push_back(world_.devMule(line));
             continue;
         }
+        // The buildings' sizes (WorldMap::devStreet, C5): `street KIND|all`.
+        if (line.rfind("street", 0) == 0) {
+            said.push_back(world_.devStreet(line));
+            continue;
+        }
         // Practice (WorldMap::devDummy, C2): `dummy here [CELLS]`.
         if (line.rfind("dummy", 0) == 0) {
             said.push_back(world_.devDummy(line));

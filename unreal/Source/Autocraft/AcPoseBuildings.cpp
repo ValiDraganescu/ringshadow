@@ -71,6 +71,17 @@ namespace AcBuildingPose
 		if (Part != INDEX_NONE) P.Local[Part].SetScale3D(AcSpace::AxesFromSceneKit(X, Y, Z));
 	}
 
+	void KeepSize(FAcPose& P, const int32 Part, const bool bX, const bool bY, const bool bZ)
+	{
+		if (Part == INDEX_NONE) return;
+		const FVector S = P.Placement.GetScale3D();
+		FVector L = P.Local[Part].GetScale3D();
+		if (bX && S.X > 0) L.X /= S.X;
+		if (bY && S.Y > 0) L.Y /= S.Y;
+		if (bZ && S.Z > 0) L.Z /= S.Z;
+		P.Local[Part].SetScale3D(L);
+	}
+
 	void GlowGroup(const FAcModelInfo& Model, FAcPose& P, const FName Material, const double Intensity, const double Exported)
 	{
 		const float V = float(Intensity / Exported);

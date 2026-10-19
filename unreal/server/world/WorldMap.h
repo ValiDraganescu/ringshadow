@@ -1041,6 +1041,14 @@ public:
     /// nearest clear ground to that (within 30% of D, at most 6 cells); its
     /// id.
     std::string devDummy(const std::string& line);
+    /// Dev and the mmosize flow (C5, WorldStreet.cpp): finished buildings
+    /// of the realm for the pictures of their sizes, those of an earlier
+    /// line taken away first. `street KIND` (habdome, garrison, bastion,
+    /// foundry, spacedock, lab, sentinel, gatling, pad, derrick): one ahead
+    /// of the pilot on clear ground (a Derrick on the nearest free well), its
+    /// Prospector at its front corner; its id. `street all`: one of each in
+    /// a row beside the realm's Citadel, a Derrick on a well near it.
+    std::string devStreet(const std::string& line);
     /// The share of a kill's XP a defence's builder earns when the defence
     /// hits a bug (docs/creatures.md, "XP and rewards").
     static constexpr double defenceXpShare = 0.5;
@@ -1907,6 +1915,8 @@ private:
     std::map<std::string, PilotState> away_;
     /// Who built each building, per region (building id → key).
     std::vector<std::map<int64_t, std::string>> builtBy_;
+    /// The buildings the dev line `street` set out (C5).
+    std::vector<int64_t> devStreet_;
     /// The realm wallet (C1).
     Wallet realm_;
     /// R2: the projects running and how many of each the realm started.

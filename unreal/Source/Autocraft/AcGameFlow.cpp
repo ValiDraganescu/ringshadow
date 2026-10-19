@@ -2179,6 +2179,11 @@ void UAcGameFlowSubsystem::TickFlowTest()
 		TickMmoMuleDriveShots(Step);
 		return;
 	}
+	if (Step == TEXT("mmosize"))
+	{
+		TickMmoSizeShots(Step);
+		return;
+	}
 	if (Step == TEXT("mmovisor"))
 	{
 		TickMmoVisorFlow(Step);

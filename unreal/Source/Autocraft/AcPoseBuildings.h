@@ -113,6 +113,12 @@ namespace AcBuildingPose
 	void SetEuler(const FAcModelInfo& Model, FAcPose& P, int32 Part, double X, double Y, double Z);
 	void SetPosition(FAcPose& P, int32 Part, double X, double Y, double Z);
 	void SetScale(FAcPose& P, int32 Part, double X, double Y, double Z);
+	/// C5: a part of a building stretched to its footprint
+	/// (`AcPose::BuildingScale`, on the placement) kept at the size it was
+	/// made, along the Unreal axes asked (x, y across, z up): a post, a lamp
+	/// or a hazard band at a Prospector's scale. Its pivot still moves out
+	/// with the stretch. For a part with no turn between it and the root.
+	void KeepSize(FAcPose& P, int32 Part, bool bX, bool bY, bool bZ);
 
 	/// A whole part's emission to a SceneKit intensity (`Exported` = the
 	/// intensity the export baked in).

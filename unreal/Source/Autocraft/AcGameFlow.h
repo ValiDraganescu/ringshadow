@@ -308,6 +308,9 @@ private:
 	/// circle, nothing at a standstill, up a slope, refused at a steep face):
 	/// AcMmoMuleDriveShots.cpp.
 	void TickMmoMuleDriveShots(const FString& Step);
+	/// C5: `mmosize` (every building kind at its size beside a Prospector,
+	/// then the street beside the Citadel): AcMmoSizeShots.cpp.
+	void TickMmoSizeShots(const FString& Step);
 	/// `mmovisor` (the visor's rain and its wiper, first person in the
 	/// rain): AcMmoVisorFlowTest.cpp.
 	void TickMmoVisorFlow(const FString& Step);

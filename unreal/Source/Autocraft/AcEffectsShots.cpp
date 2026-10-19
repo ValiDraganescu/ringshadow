@@ -36,7 +36,7 @@ namespace
 	constexpr double Cm = AcSpace::CmPerCell;
 
 	/// `GameScene.Building.radius` (`makeBuilding`, GameScene.swift:370-420).
-	/// C1, C5: every footprint grew in the MMO (docs/building-size.md).
+	/// C1, C5: every footprint grew in the MMO (docs/building-sizes.md).
 	double BuildingRadius(const ac::StructureKind K) { return ac::Rules::radius(K); }
 
 	/// `Trooper.muzzles` (GameScene.swift:1646) as exported part names: the

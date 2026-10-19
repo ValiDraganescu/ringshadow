@@ -238,7 +238,7 @@ namespace AcPose
 	/// How tall a building's body is (`GameScene.makeBuilding`'s `height`),
 	/// cells: the core's `Rules::height` (C5: x2.4 in the MMO).
 	AUTOCRAFT_API double BuildingHeight(ac::StructureKind Kind);
-	/// C5 (docs/building-size.md): how much a building's model is stretched
+	/// C5 (docs/building-sizes.md): how much a building's model is stretched
 	/// to stand on its footprint, Unreal axes (x, y across, z up): the
 	/// footprint `Rules::radius` over the radius the model was made for,
 	/// and `Rules::height` over the height it was made for. One in the
