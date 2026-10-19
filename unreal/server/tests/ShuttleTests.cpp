@@ -207,8 +207,8 @@ TEST(shuttle_mule_rides_with_its_driver) {
 }
 
 /// `ferry mule` (the mmoferrymule flow's rig): the pilot's Mule on the
-/// grounded ship's axis behind the ramp, facing it, driven; driven straight
-/// on, it goes up the ramp into the bay.
+/// grounded ship's axis behind the ramp, facing it, its Prospector beside the
+/// perch; taken and driven straight on, it goes up the ramp into the bay.
 TEST(shuttle_dev_ferry_mule_drives_up_the_ramp) {
     WorldMap w(first(), params());
     rig(w);
@@ -217,6 +217,13 @@ TEST(shuttle_dev_ferry_mule_drives_up_the_ramp) {
     const std::string said = w.devFerry("ferry mule");
     std::printf("  %s\n", said.c_str());
     ASSERT_TRUE(said.rfind("dev: ferry: the Mule behind the ramp", 0) == 0);
+    // On foot beside the perch: the take is the game's (E at the perch).
+    ASSERT_TRUE(!w.drivesMule(a));
+    const auto own = w.mule(a);
+    ASSERT_TRUE(own.has_value());
+    EXPECT_TRUE(distance(drivenBy(w, a)->position, Mule::perch(*w.regionOf(a)->simulation().state.unit(own->second))) <= Mule::reach);
+    ASSERT_TRUE(!w.take(a, own->second));
+    w.step();
     ASSERT_TRUE(w.drivesMule(a));
     const Shuttle* s = nearestShip(w, a);
     ASSERT_TRUE(s != nullptr);
