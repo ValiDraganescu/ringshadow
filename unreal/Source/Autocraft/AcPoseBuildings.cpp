@@ -3,8 +3,10 @@
 // AcPoseBuildings.h.
 #include "AcPoseBuildings.h"
 
+#include "AcActPick.h"
 #include "AcCitadelAct.h"
 
+#include "Act.h"
 #include "Defence.h"
 #include "Rules.h"
 #include "Types.h"
@@ -39,6 +41,24 @@ namespace AcBuildingPose
 		const FAcModelPart& R = Model.Parts[Part];
 		const FQuat Own = SkEuler(R.SkEuler.X, R.SkEuler.Y, R.SkEuler.Z);
 		P.Local[Part].SetRotation(R.Rest.GetRotation() * Own.Inverse() * SkEuler(X, Y, Z));
+	}
+
+	void CallPost(const FAcPoseContext& C, FAcPose& P, const bool bLive)
+	{
+		static const FPart Post(TEXT("callPost")), Button(TEXT("callButton"));
+		const ac::Structure& S = *C.Structure;
+		const int32 I = Post.Get(C.Model);
+		if (I == INDEX_NONE) return;
+		const double R = ac::Rules::radius(S.kind);
+		const ac::Vec2 At = S.kind == ac::StructureKind::landingPad ? ac::Act::padPostAt(R) : ac::Act::foundryPostAt(R);
+		// Under the root (front +Y): the placement's stretch undone, so the
+		// post keeps a person's height beside a building drawn bigger.
+		const FVector Stretch = P.Placement.GetScale3D();
+		const FVector Keep(1.0 / FMath::Max(Stretch.X, 1e-3), 1.0 / FMath::Max(Stretch.Y, 1e-3), 1.0 / FMath::Max(Stretch.Z, 1e-3));
+		P.Local[I].SetTranslation(FVector(AcSpace::ToCm(At.x), AcSpace::ToCm(At.y), 0.0) * Keep);
+		P.Local[I].SetScale3D(Keep);
+		P.Visible[I] = bLive;
+		Lamp(P, Button.Get(C.Model), !bLive ? 0.05 : AcActPick::Lit() == S.id ? 3.0 : 1.0, 1.0);
 	}
 
 	void SetPosition(FAcPose& P, const int32 Part, const double X, const double Y, const double Z)

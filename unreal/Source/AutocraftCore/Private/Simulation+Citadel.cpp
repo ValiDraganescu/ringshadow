@@ -3,8 +3,10 @@
 
 #include "Simulation.h"
 
+#include "Act.h"
 #include "Defence.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace ac {
@@ -75,8 +77,10 @@ bool Simulation::standsInHall(const Unit& u) const {
 std::optional<std::string> Simulation::doorRefusal(const Structure& s, bool open, const Unit& u) const {
     const Footprint& f = Rules::footprint(s.kind);
     if (!f.door || !s.complete() || !s.door) return std::string("No door to work here");
-    const Vec2 local = u.position - s.position;
-    if (f.door->distance(local) > Rules::doorReach) return std::string("Too far from the door");
+    // Within reach of its leaf or a panel beside it (Act.h), either side.
+    double off = Act::gap(u, *Act::doorLeaf(s));
+    for (const bool inside : {false, true}) off = std::min(off, Act::gap(u, *Act::doorPanel(s, inside)));
+    if (off > Act::serverReach) return std::string("Too far from the door");
     if (open) return std::nullopt;
     for (const Unit& v : state.units) {
         if (!(v.hp > 0) || v.airborne() || v.task == Unit::Task::aboard) continue;
@@ -121,14 +125,13 @@ std::optional<std::string> Simulation::man(int64_t unit, int64_t structure, int 
         if (!s.guns) return std::string("The Citadel's guns are not armed");
         if (mannedGun(u)) return std::string("Already at a gun");
         if (!sheltered(u)) return std::string("Get inside the Citadel first");
-        const Vec2 at = Defence::gunStation(s.position, gun);
-        if (distance(u.position, at) > Defence::stationReach) return std::string("Too far from the gun's station");
+        if (Act::gap(u, Act::console(s, gun)) > Act::serverReach) return std::string("Too far from the gun's station");
         CornerGun& g = (*s.guns)[size_t(gun)];
         if (g.gunner) return std::string("Someone is at that gun");
         g.gunner = u.id;
         u.task = Unit::Task::atGun;
         u.structure = s.id;
-        u.position = at;
+        u.position = Defence::gunStation(s.position, gun);
         return std::nullopt;
     }
     return std::string("No such building");

@@ -24,8 +24,8 @@ public:
     /// though the grid blocks the whole square for everyone else.
     bool standsInHall(const Unit& u) const;
     /// Why unit `u` can't open (`open`) or close the door of `s` now, or nil:
-    /// `s` a complete Citadel; `u` within `Rules::doorReach` of the door slab
-    /// (either side: C4, it closes from outside too); to close, no unit in
+    /// `s` a complete Citadel; `u` within `Act::serverReach` of the door's leaf
+    /// or a panel beside it (either side: C4, it closes from outside too); to close, no unit in
     /// the doorway (the door slab grown by each unit's radius). The server checks
     /// the rest (the unit complete, the Citadel the realm's).
     std::optional<std::string> doorRefusal(const Structure& s, bool open, const Unit& u) const;
@@ -34,8 +34,8 @@ public:
     /// the door is on its way.
     std::optional<std::string> door(int64_t unit, int64_t structure, bool open);
     /// Unit `unit` takes corner gun `gun` (0 to 3) of the Citadel
-    /// `structure`: it must be sheltered, within `Defence::stationReach` of
-    /// the gun's station, and the gun free. It then stands at the station
+    /// `structure`: it must be sheltered, within `Act::serverReach` of
+    /// the gun's console (`Act::console`), and the gun free. It then stands at the station
     /// with task `atGun`. The refusal, or nil.
     std::optional<std::string> man(int64_t unit, int64_t structure, int gun);
     /// Unit `unit` leaves the gun it mans (nothing when it mans none).

@@ -3,6 +3,7 @@
 // few seconds.
 #include "Brood.h"
 #include "RegionFile.h"
+#include "Act.h"
 #include "Defence.h"
 #include "HallScene.h"
 #include "SimHelpers.h"
@@ -239,22 +240,21 @@ TEST(door_closesOnlyWhenTheDoorwayIsClear) {
     EXPECT_TRUE(!h.sim.door(h.pilot, h.citadel, true));
 }
 
-// C4: the door opens and closes from either side within `doorReach` (the
-// foot of the ramp outside, the hall's front third inside), never from
-// deep in the hall or far out on the apron.
+// C4: the door opens and closes from either side, never from deep in the
+// hall or far out on the apron. C5: within `Act::serverReach` of its leaf
+// or a panel beside the doorway (Act.h), from the body's edge.
 TEST(door_opensAndClosesFromEitherSide) {
     const CitadelHall on(true);
     Hall h = hallScene(kAt + Vec2(0, 3));
-    EXPECT_EQ(Rules::doorReach, 3.0);
     auto refusal = [&](Vec2 local, bool open) {
         const Unit u(997, Unit::Kind::prospector, 0, kAt + local, 0, Unit::Task::idle);
         return h.sim.doorRefusal(structureOf(h.sim, h.citadel), open, u);
     };
-    for (const Vec2 at : {Vec2(0, 7.2), Vec2(0, 8.9), Vec2(-2.5, 7), Vec2(0, 3), Vec2(0, 2.1), Vec2(-2.5, 3.5)}) {
+    for (const Vec2 at : {Vec2(0, 7.2), Vec2(0, 8.3), Vec2(-2.5, 7), Vec2(0, 3), Vec2(0, 2.7), Vec2(-2.5, 3.5), Vec2(4.5, 6.5)}) {
         EXPECT_TRUE(!refusal(at, true));
         EXPECT_TRUE(!refusal(at, false));
     }
-    for (const Vec2 at : {Vec2(0, 9.2), Vec2(0, 1.8), Vec2(0, -2), Vec2(-4.9, 4)}) {
+    for (const Vec2 at : {Vec2(0, 8.5), Vec2(0, 2.5), Vec2(0, -2), Vec2(-4.9, 4), Vec2(5.2, 7)}) {
         EXPECT_EQ(refusal(at, true), std::optional<std::string>("Too far from the door"));
         EXPECT_EQ(refusal(at, false), std::optional<std::string>("Too far from the door"));
     }

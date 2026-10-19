@@ -8,6 +8,8 @@
 
 #include "Simulation.h"
 
+#include "Act.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -459,6 +461,9 @@ std::optional<Vec2> Simulation::pilotContact(const Unit& u, Vec2 from, Vec2 to) 
                 if (b.z0 <= 0.1 && b.contains(at, r)) return away(s.position + b.nearest(seen));
             }
         }
+        for (const Structure& s : state.structures) {
+            if (const auto post = Act::postFoot(s); post && post->contains(to, r)) return away(post->nearest(from));
+        }
         for (const OreDeposit& m : state.patches) {
             if (!(m.remaining > 0 && NavGrid::insidePatch(to, m, r - 0.1))) continue;
             const Block box{m.position, Vec2(1, 0.5), -m.angle};
@@ -522,6 +527,13 @@ bool Simulation::pilotCanStand(const Unit& u, Vec2 p) const {
     }
     if (std::any_of(state.patches.begin(), state.patches.end(), [&](const OreDeposit& m) {
             return m.remaining > 0 && NavGrid::insidePatch(p, m, r - 0.1);
+        })) {
+        return false;
+    }
+    // The call posts beside a Landing Pad and a Foundry (C5, Act.h).
+    if (std::any_of(state.structures.begin(), state.structures.end(), [&](const Structure& s) {
+            const auto post = Act::postFoot(s);
+            return post && post->contains(p, r);
         })) {
         return false;
     }

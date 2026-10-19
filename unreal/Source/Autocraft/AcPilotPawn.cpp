@@ -29,7 +29,6 @@
 #include "AcRtsPawn.h"
 #include "AcSettings.h"
 #include "AcShot.h"
-#include "AcShuttleAct.h"
 #include "AcShuttleShip.h"
 #include "AcShuttleView.h"
 #include "AcSimSubsystem.h"
@@ -616,6 +615,9 @@ void AAcPilotPawn::Leave(const bool bHandBack)
 	GunManned = INDEX_NONE;
 	GunCitadelId = 0;
 	AcCitadelAct::SetPanel(0, INDEX_NONE);
+	AcActPick::SetLit(0);
+	ActNow.Reset();
+	ActBox.Reset();
 	Dive.Reset();
 	PullOut.Reset();
 	bHold = false;
@@ -722,82 +724,65 @@ void AAcPilotPawn::Press(const bool bDown, const bool bKeyE)
 		if (OnKey) OnKey(TEXT("place"));
 		return;
 	}
-	// C1: nothing else to act on: a gun station, else the Citadel's door
-	// (AcCitadelAct.h), asked of the server. At a gun the key fires.
-	if (FAcMmoClient* Mmo = Sim->MmoClient(); Mmo && GunManned == INDEX_NONE)
+	// C5: in the MMORPG mode E works only the act under the crosshair in
+	// reach (AcActPick.h), and nothing when there is none; the click and
+	// Space keep the core's acts. At a gun every key fires.
+	if (FAcMmoClient* Mmo = Sim->MmoClient(); Mmo && GunManned == INDEX_NONE && bKeyE)
 	{
-		const ac::Simulation& S = Sim->Simulation();
-		// C4, first: the Mule (climb on and off, fill it) and the Foundry's
-		// Mule to buy (AcMuleAct.h). Driving it, a Dropship's button or a
-		// Citadel's door with the crosshair on it comes first (below).
-		if (const std::optional<ac::Unit> U = S.pilotUnit(); U && !S.pilotTarget(*U)
-			&& !(U->kind == ac::UnitKind::mule && (AcShuttleAct::Find(S, *U) || AcCitadelAct::Find(S, *U))))
+		bHold = false;
+		if (!ActNow)
 		{
-			if (const TOptional<AcMuleAct::FAct> A = AcMuleAct::Find(S, *U, AcMuleAct::OwnOf(Mmo)))
+			UE_LOG(LogAutocraft, Log, TEXT("pilot: E, nothing under the crosshair in reach"));
+			return;
+		}
+		const AcActPick::FAct& A = *ActNow;
+		using EKind = AcActPick::EKind;
+		const double Now = FPlatformTime::Seconds();
+		if (A.Kind == EKind::Demolish)
+		{
+			if (A.Why) OnNote.Broadcast(*A.Why);
+			else DemolishHold.Start(A.Id, Now);
+			UE_LOG(LogAutocraft, Log, TEXT("pilot: demolish hold on #%lld%s"), (long long)A.Id, A.Why ? TEXT(" (refused here)") : TEXT(""));
+			return;
+		}
+		// A button pressed: the Dropship's draws its press; every one clunks.
+		if (A.Kind == EKind::Ramp || A.Kind == EKind::TakeOff) AcShuttleShip::Pressed(A.Id, A.Kind == EKind::TakeOff, Now);
+		if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this); Audio && (A.Kind == EKind::Ramp || A.Kind == EKind::TakeOff || A.Kind == EKind::Call || A.Kind == EKind::Buy))
+		{
+			Audio->Rules().ButtonClunk();
+		}
+		if (A.Why)
+		{
+			if (A.Kind == EKind::Board || A.Kind == EKind::Fill || A.Kind == EKind::Buy || A.Kind == EKind::Leave) AcMuleAct::Toast(this, *A.Why);
+			else OnNote.Broadcast(*A.Why);
+		}
+		else
+		{
+			switch (A.Kind)
 			{
-				bHold = false;
-				using EKind = AcMuleAct::FAct::EKind;
-				if (A->Why) AcMuleAct::Toast(this, *A->Why);
-				else if (A->Kind == EKind::Board) Mmo->Want(A->Target);
-				else if (A->Kind == EKind::Leave) Mmo->Want(A->Rider);
-				else if (A->Kind == EKind::Fill) Mmo->MuleFill(A->Target);
-				else Mmo->BuyMule(A->Target);
-				UE_LOG(LogAutocraft, Log, TEXT("pilot: mule act %s"), *A->Prompt());
-				return;
+			case EKind::Door: Mmo->Door(A.bOpen); break;
+			case EKind::Gun: Mmo->Man(A.Index); break;
+			case EKind::Board: Mmo->Want(A.Id); break;
+			case EKind::Leave: Mmo->Want(A.Rider); break;
+			case EKind::Fill: Mmo->MuleFill(A.Id); break;
+			case EKind::Buy: Mmo->BuyMule(A.Id); break;
+			case EKind::Call: Mmo->CallShuttle(); break;
+			case EKind::Ramp: Mmo->Ramp(A.bOpen); break;
+			case EKind::TakeOff:
+				if (UAcGameFlowSubsystem* Flow = UAcGameFlowSubsystem::Get(this)) Flow->OpenWorldMap();
+				break;
+			case EKind::Demolish: break;
 			}
 		}
-		if (const std::optional<ac::Unit> U = S.pilotUnit(); U && !S.pilotTarget(*U))
-		{
-			// C4: the walk-in Dropship (AcShuttleAct.h): a call from a pad,
-			// its ramp post, its take-off button (the flight menu).
-			if (const TOptional<AcShuttleAct::FAct> A = AcShuttleAct::Find(S, *U))
-			{
-				bHold = false;
-				const double Now = FPlatformTime::Seconds();
-				if (A->Kind != AcShuttleAct::FAct::EKind::Call) AcShuttleShip::Pressed(A->Ship, A->Kind == AcShuttleAct::FAct::EKind::TakeOff, Now);
-				if (A->Why) OnNote.Broadcast(*A->Why);
-				else if (A->Kind == AcShuttleAct::FAct::EKind::Call) Mmo->CallShuttle();
-				else if (A->Kind == AcShuttleAct::FAct::EKind::Ramp) Mmo->Ramp(A->bOpen);
-				else if (UAcGameFlowSubsystem* Flow = UAcGameFlowSubsystem::Get(this)) Flow->OpenWorldMap();
-				if (UAcAudioDirector* Audio = UAcAudioDirector::Get(this); Audio && A->Kind != AcShuttleAct::FAct::EKind::Call)
-				{
-					Audio->Rules().ButtonClunk();
-				}
-				UE_LOG(LogAutocraft, Log, TEXT("pilot: dropship %s%s"), *A->Prompt(), A->Why ? TEXT(" (refused here)") : TEXT(""));
-				return;
-			}
-			if (const TOptional<AcCitadelAct::FAct> A = AcCitadelAct::Find(S, *U))
-			{
-				bHold = false;
-				if (A->Why) OnNote.Broadcast(*A->Why);
-				else if (A->Kind == AcCitadelAct::FAct::EKind::Man) Mmo->Man(A->Gun);
-				else Mmo->Door(A->bOpen);
-				return;
-			}
-		}
-		// C3: E on a realm building in reach holds to demolish it; it does
-		// not act (the click and Space still fire, weld, mend and enter).
-		if (const std::optional<ac::Unit> U = S.pilotUnit(); bKeyE && U && Cross)
-		{
-			if (const TOptional<int64> T = AcDemolish::Target(S, *U, Cross->Target))
-			{
-				bHold = false;
-				DemolishHold.Start(*T, FPlatformTime::Seconds());
-				UE_LOG(LogAutocraft, Log, TEXT("pilot: demolish hold on #%lld"), (long long)*T);
-				return;
-			}
-		}
+		UE_LOG(LogAutocraft, Log, TEXT("pilot: E %s%s"), *A.Prompt(), A.Why ? TEXT(" (refused here)") : TEXT(""));
+		return;
 	}
 	Sim->Simulation().pilot->act = true;
 }
 
 int64 AAcPilotPawn::DemolishTarget() const
 {
-	const UAcSimSubsystem* Sim = SimOf(this);
-	if (!Driving() || !Sim || !Sim->IsRunning() || !Sim->IsMmo() || !Cross || GunManned != INDEX_NONE) return INDEX_NONE;
-	const ac::Simulation& S = Sim->Simulation();
-	const std::optional<ac::Unit> U = S.pilotUnit();
-	return U ? AcDemolish::Target(S, *U, Cross->Target).Get(INDEX_NONE) : INDEX_NONE;
+	return ActNow && ActNow->Kind == AcActPick::EKind::Demolish && !ActNow->Why ? ActNow->Id : int64(INDEX_NONE);
 }
 
 TOptional<double> AAcPilotPawn::DemolishFill() const
@@ -1077,6 +1062,8 @@ void AAcPilotPawn::CastCrosshair(const bool bPredict)
 		? FMath::Max(AcSpace::ToCm(0.3), FVector::DotProduct(*Chase.Eye() - O, D)) : AcSpace::ToCm(0.05);
 	const FVector A = O + D * Near, B = O + D * AcSpace::ToCm(AcPilotAim::ShotReach);
 	FCrosshair C;
+	C.From = A;
+	C.To = B;
 	if (const TOptional<FAcRayHit> H = Rays->SightHit(A, B, DrivenId))
 	{
 		C.Point = H->Point;
@@ -1087,6 +1074,63 @@ void AAcPilotPawn::CastCrosshair(const bool bPredict)
 		C.Point = B;
 	}
 	Cross = C;
+}
+
+void AAcPilotPawn::UpdateAct(const ac::Simulation& S, const ac::Unit& U, const double Feet)
+{
+	ActNow.Reset();
+	ActBox.Reset();
+	AcActPick::SetLit(0);
+	UAcSimSubsystem* Sim = SimOf(this);
+	if (!Sim || !Sim->IsMmo() || GunManned != INDEX_NONE || !Cross) return;
+	// The crosshair's own ray: the first box it enters before the world
+	// stops it, in reach; else the building it is on, in reach.
+	AcActPick::FRay Ray;
+	Ray.Start = Cross->From;
+	Ray.End = Cross->To;
+	Ray.Blocked = Cross->Point;
+	bool bOnBox = false;
+	ActBox = AcActPick::Pick(AcActPick::Targets(S, U, ActWorld(Feet)), Ray, &bOnBox);
+	const double HitGap = Cross->Target != INDEX_NONE ? AcActPick::GapTo(U, Feet, Cross->Point) : 1e9;
+	ActNow = AcActPick::Act(S, U, AcMuleAct::OwnOf(Sim->MmoClient()), ActBox, bOnBox, Cross->Target, HitGap);
+	AcActPick::SetLit(ActBox && (ActBox->Kind == AcActPick::EKind::Call || ActBox->Kind == AcActPick::EKind::Buy) ? ActBox->Id : 0);
+}
+
+AcActPick::FWorld AAcPilotPawn::ActWorld(const double Feet) const
+{
+	AcActPick::FWorld W;
+	W.Ground = [World = GetWorld()](const ac::Vec2 P) { return GroundAt(World, P); };
+	W.Ship = [](const int64 Id) -> TOptional<FTransform> {
+		if (const AcShuttleView::FShip* F = AcShuttleView::Find(Id)) return F->Placement;
+		return {};
+	};
+	W.Feet = Feet;
+	return W;
+}
+
+bool AAcPilotPawn::TestLookAtAct(const AcActPick::EKind Kind, const int64 Id, const int32 Index)
+{
+	const UAcSimSubsystem* Sim = SimOf(this);
+	if (!Driving() || !Sim || !Sim->IsRunning()) return false;
+	const ac::Simulation& S = Sim->Simulation();
+	const std::optional<ac::Unit> U = S.pilotUnit();
+	if (!U) return false;
+	for (const AcActPick::FTarget& T : AcActPick::Targets(S, *U, ActWorld(0)))
+	{
+		if (T.Kind != Kind || (Id != 0 && T.Id != Id) || (Index != INDEX_NONE && T.Index != Index)) continue;
+		TestLookAt(T.Frame.GetLocation());
+		return true;
+	}
+	return false;
+}
+
+void AAcPilotPawn::TestLookAt(const FVector& Target)
+{
+	if (!LastEye) return;
+	const FVector D = (Target - *LastEye).GetSafeNormal();
+	if (D.IsNearlyZero()) return;
+	PilotYaw = std::atan2(D.Y, D.X);
+	Look(0.0, (Cam.Pitch - std::asin(FMath::Clamp(D.Z, -1.0, 1.0))) / PitchPerPoint);
 }
 
 TOptional<FVector> AAcPilotPawn::AimPoint() const
@@ -1292,10 +1336,10 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 		ApplyView();
 		UE_LOG(LogAutocraft, Log, TEXT("pilot: %s"), Gun ? *FString::Printf(TEXT("at gun %s"), *AcCitadelAct::GunName(Now)) : TEXT("off the gun"));
 	}
-	if (const TOptional<AcCitadelAct::FAct> A = Gun ? TOptional<AcCitadelAct::FAct>() : AcCitadelAct::Find(S, U);
-		A && A->Kind == AcCitadelAct::FAct::EKind::Door)
+	// The door panel on the pilot's side lit while E is on the door (C5).
+	if (!Gun && ActNow && ActNow->Kind == AcActPick::EKind::Door)
 	{
-		AcCitadelAct::SetPanel(A->Citadel, A->bInside ? 1 : 0);
+		AcCitadelAct::SetPanel(ActNow->Id, ActNow->bInside ? 1 : 0);
 	}
 	else
 	{
@@ -1401,45 +1445,6 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	SetActorLocationAndRotation(View, ViewRot);
 	LastEye = At;
 	LastRotation = Rot;
-	// C4: driving a Mule, what the crosshair is on: a Dropship's button, a
-	// Citadel's door (E works it then; else E climbs off; AcShuttleAct.h).
-	{
-		AcShuttleAct::FDriverAim Aim;
-		if (U.kind == ac::UnitKind::mule)
-		{
-			const FVector Dir = Rot.GetForwardVector();
-			if (Ship)
-			{
-				auto Button = [&](const ac::Vec3& B) { return Ship->Placement.TransformPosition(FVector(AcSpace::ToCm(B.x), AcSpace::ToCm(B.y), AcSpace::ToCm(B.z))); };
-				Aim.bRampButton = AcShuttleAct::Aims(At, Dir, Button(ac::ShuttleBay::rampButton), 10.0);
-				Aim.bTakeOffButton = !Aim.bRampButton && AcShuttleAct::Aims(At, Dir, Button(ac::ShuttleBay::takeOffButton), 10.0);
-			}
-			for (const ac::Structure& C : S.state.structures)
-			{
-				const ac::Footprint& F = ac::Rules::footprint(C.kind);
-				if (C.kind != ac::StructureKind::citadel || !C.complete() || !F.door || ac::distance(C.position, U.position) > 20.0) continue;
-				// The door while it stands (shut or moving), and the panels
-				// beside the doorway (outside and in, citadel.py's
-				// `doorPanels_k`); an open door lies on the ground, so a look
-				// through the doorway is not on it.
-				const double G = GroundAt(GetWorld(), C.position);
-				FVector Hit, Normal;
-				float Time = 0.f;
-				auto On = [&](const FBox& Box) { return FMath::LineExtentBoxIntersection(Box, At, At + Dir * 900.0, FVector::ZeroVector, Hit, Normal, Time); };
-				if (!(C.door && C.door->open >= 0.95))
-				{
-					Aim.bDoor |= On(FBox(AcSpace::ToWorld(C.position + F.door->min, G + F.door->z0) - FVector(20, 20, 0),
-						AcSpace::ToWorld(C.position + F.door->max, G + F.door->z1) + FVector(20, 20, 0)));
-				}
-				for (const double Y : {F.door->max.y + 0.07, F.door->min.y - 0.07})
-				{
-					const FVector P = AcSpace::ToWorld(C.position + ac::Vec2(2.25, Y), G + 1.2);
-					Aim.bDoor |= On(FBox(P - FVector(45, 45, 45), P + FVector(45, 45, 45)));
-				}
-			}
-		}
-		AcShuttleAct::SetDriverAim(Aim);
-	}
 	LastViewYaw = PilotYaw;
 	LastViewPitch = Cam.Pitch;
 	LastPivot = Root.GetTranslation();
@@ -1456,6 +1461,8 @@ void AAcPilotPawn::Follow(const FAcFrame& Frame)
 	// The crosshair again from this frame's eye: the cockpit (posed after
 	// this) aims its guns through it.
 	CastCrosshair();
+	// C5: what E is on now, from that ray.
+	UpdateAct(S, U, AcSpace::HeightToSim(RootOf(U).GetTranslation()));
 	Cam.Track(U, S.state.time);
 	// Looking around: the crosshair where the aim's ray meets the world, as
 	// the swung camera sees it (none when that is off the view).

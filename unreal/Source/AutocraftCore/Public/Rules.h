@@ -498,10 +498,6 @@ struct AUTOCRAFTCORE_API Rules {
     static constexpr double citadelBugFloor = 0.10;
     /// A Citadel's door runs from shut to open (and back) in this long.
     static constexpr double doorSeconds = 2.5;
-    /// A pilot opens or closes the door standing within this many cells of
-    /// the door slab, on either side (C4: 3, from the ramp's foot outside
-    /// and the hall's front third inside; 2 until C4).
-    static constexpr double doorReach = 3.0;
     /// Units walk over it (F2: a Landing Pad is a deck on the ground, the
     /// Prospector stands on it to call the Dropship and steps out onto it).
     static bool walkable(StructureKind k) { return k == StructureKind::landingPad; }

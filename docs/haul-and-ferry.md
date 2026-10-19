@@ -314,7 +314,10 @@ World message), RolesTests' and WorldTests' flights, FrontierTests'
     shown state for a moment: it is carried on from its last state in the
     new world frame (up to 3 s) until the target region's copy comes, and
     its actor is kept under the new number.
-  - **The acts** (`AcShuttleAct.h`), on E when nothing else takes it: on a
+  - **The acts** (C5: one rule for all of them since 2026-10-19,
+    [acting.md](acting.md): the crosshair on the call post's button, the ramp
+    post or the take-off button, within reach; `AcShuttleAct` is gone into
+    `AcActPick`). Before C5, on E when nothing else took it: on a
     finished realm Landing Pad with no ship on it, "E · CALL THE DROPSHIP";
     in the bay by the ramp post "E · OPEN THE RAMP" / "E · CLOSE THE RAMP";
     at the console "E · TAKE OFF", which opens the world map as the flight
@@ -407,7 +410,9 @@ World message), RolesTests' and WorldTests' flights, FrontierTests'
   rail and the levers' knobs at the bottom of the view; it rocks as it
   rolls); third person on a boom of 0.7 × the default (the Mule drawn as big
   as a Firefly).
-- **E** (`AcMuleAct`, before the Citadel's acts): "E · CLIMB ON" at the
+- **E** (C5: the crosshair on the perch, the hopper or the Foundry's call
+  post, within reach, [acting.md](acting.md); before C5 `AcMuleAct` by
+  distance, before the Citadel's acts): "E · CLIMB ON" at the
   perch, "E · CLIMB OFF" driving it (so in the hall E climbs off; open the
   door on foot), "E · FILL THE MULE" at the hopper while carrying (the
   hopper wins over the perch then), "E · BUY MULE · 600 ORE · 150 MH" at a

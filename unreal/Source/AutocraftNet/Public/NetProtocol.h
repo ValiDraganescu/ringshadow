@@ -604,7 +604,7 @@ struct RequestMessage {
         bool operator==(const CallHunt&) const = default;
     };
     /// C1: open or close the door of the realm's Citadel in the pilot's
-    /// region, from either side within `Rules::doorReach` (C4: it closes
+    /// region, from either side within `Act::serverReach` of its leaf or panels (C4: it closes
     /// from outside too; docs/citadel-interior.md, section 3).
     struct Door {
         bool open = true;
@@ -639,7 +639,7 @@ struct RequestMessage {
         bool operator==(const BuyMule&) const = default;
     };
     /// C4: the pilot's Prospector, on foot with a load, puts it all into
-    /// Mule `mule`'s hopper (within `Mule::reach` of it).
+    /// Mule `mule`'s hopper (within `Act::serverReach` of it).
     struct MuleFill {
         int64_t mule = 0;
         bool operator==(const MuleFill&) const = default;

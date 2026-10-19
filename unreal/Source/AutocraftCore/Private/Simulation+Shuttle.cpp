@@ -2,6 +2,7 @@
 // section 3; Simulation+Shuttle.members.h): its stages, its ramp, the walk
 // in its bay, the riders carried, the buttons' refusals.
 
+#include "Act.h"
 #include "Mule.h"
 #include "Shuttle.h"
 #include "Simulation.h"
@@ -32,12 +33,9 @@ Block bodyIn(const Shuttle& s, const Unit& u) {
     return Block{ShuttleBay::local(s, u.position), half, u.heading - s.heading};
 }
 
-/// A button at `b` (the ship's frame) is within reach of `u`: from its
-/// body's nearest point.
-bool bodyReaches(const Shuttle& s, const Unit& u, Vec3 b) {
-    const Block body = bodyIn(s, u);
-    return length(body.nearest(Vec2(b.x, b.y)) - Vec2(b.x, b.y)) <= ShuttleBay::reach;
-}
+/// A button's box `b` (the ship's frame, `Act`) is within the server's
+/// reach of `u`'s body.
+bool bodyReaches(const Shuttle& s, const Unit& u, const Block& b) { return Act::gap(bodyIn(s, u), b) <= Act::serverReach; }
 
 /// `u`'s body reaches over the ramp's strip, behind the opening.
 bool bodyOverRamp(const Shuttle& s, const Unit& u) {
@@ -92,7 +90,7 @@ std::optional<std::string> Simulation::rampRefusal(const Shuttle& s, const Unit&
     if (s.flying()) return std::string("Wait for the landing");
     if (!s.grounded()) return std::string("No ramp to work here");
     const Vec2 l = ShuttleBay::local(s, u.position);
-    if (!ShuttleBay::inBay(l) || !bodyReaches(s, u, ShuttleBay::rampButton)) return std::string("Too far from the ramp button");
+    if (!ShuttleBay::inBay(l) || !bodyReaches(s, u, Act::rampPostLocal())) return std::string("Too far from the ramp button");
     if (open) return std::nullopt;
     // Anyone whose body (its walk's circle, a Mule's box) reaches past the
     // opening's edge over the ramp's strip.
@@ -117,7 +115,7 @@ std::optional<std::string> Simulation::takeOffRefusal(const Shuttle& s, const Un
     if (s.flying()) return std::string("In flight");
     if (!s.grounded()) return std::string("Wait for the landing");
     const Vec2 l = ShuttleBay::local(s, u.position);
-    if (!ShuttleBay::inBay(l) || !bodyReaches(s, u, ShuttleBay::takeOffButton)) return std::string("Too far from the take-off button");
+    if (!ShuttleBay::inBay(l) || !bodyReaches(s, u, Act::takeOffLocal())) return std::string("Too far from the take-off button");
     if (s.ramp.open > 0 || s.ramp.opening) return std::string("Close the ramp first");
     return std::nullopt;
 }

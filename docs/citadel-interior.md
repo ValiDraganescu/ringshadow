@@ -164,9 +164,8 @@ std::optional<Door> Structure::door;   // set on every complete Citadel (the ser
   two corners by the door (SE, SW, 1.5 reach) took the prompt first wherever
   they overlapped it. The user's logs show the open request and the guns
   manned, never a close request.
-- The game sends it on the act key (E / click / Space) with the door panel
-  under the crosshair or within `doorReach` and nothing else to act on
-  (section 7).
+- The game sends it on E with the crosshair on the door or a panel beside
+  it, within reach (C5: [acting.md](acting.md); section 7).
 - Save: the door state is not saved; a loaded Citadel starts closed.
 
 ## 4. Shelter (core, server)
@@ -318,6 +317,11 @@ arc with a hard stop (no wrap) and the pitch to its limits, both on the
 client and again by the server. The cockpit is hidden; the unit is hidden.
 
 ## 7. Input and the HUD (game)
+
+Since C5 (2026-10-19) the act key's targets follow one rule:
+[acting.md](acting.md). E works only the door's panel or the door, or a
+gun's console, under the crosshair and within `ac::Act::reach`; the click
+and Space no longer work them. The C1 text below is the history.
 
 - The act key (E, click, Space) in order: the existing targets (drill,
   strike, repair, enter the Derrick, place a building), else a **gun

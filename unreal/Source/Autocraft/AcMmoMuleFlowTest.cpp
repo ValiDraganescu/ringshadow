@@ -5,18 +5,21 @@
 // Prospector on the start pad.
 //
 //   mmomule   The server's dev line puts a finished Foundry ahead (`mule
-//             foundry`, the pilot by its door). At it, "E · BUY MULE": E opens
+//             foundry`, the pilot by its call post). The crosshair on the post's
+//             button (C5: E works only what it is on, in reach), "E · BUY MULE": E opens
 //             the Foundry's menu (or buys) and E again buys: 600 ore and 150 MH leave
 //             the wallet, the Progress message tells the Mule rolling out;
 //             about 20 s later it is out of the Foundry's door. Then the
 //             staging: a Citadel ahead (`citadel here`), the Mule set outside
 //             its open door facing in, the pilot by its hopper (`mule door`),
-//             25 ore in the gripper (`carry ore 25`). At the hopper,
-//             "E · FILL THE MULE": E puts the load in (the Mule holds 25, the
-//             wallet unchanged). At the perch, "E · CLIMB ON": E, and the
+//             25 ore in the gripper (`carry ore 25`). At the hopper, the
+//             crosshair on it, "E · FILL THE MULE": E puts the load in (the
+//             Mule holds 25, the wallet unchanged). At the perch, the
+//             crosshair on it, "E · CLIMB ON": E, and the
 //             pilot drives the Mule. Driven straight ahead it goes in through
 //             the door; in the hall it books: the wallet rises by the load
-//             less the realm's cut, the Mule empty. "E · CLIMB OFF": E, and the
+//             less the realm's cut, the Mule empty. Nothing under the
+//             crosshair, "E · CLIMB OFF": E, and the
 //             pilot is on foot in its Prospector again. Every move through the
 //             pawn's own hooks (the act key E, the move keys, the look).
 //
@@ -24,12 +27,14 @@
 //   uv run unreal/Tools/hidden_run.py --out DIR --headless -- -AcFlowTest=mmomule
 #include "AcGameFlow.h"
 
+#include "AcActPick.h"
 #include "AcLog.h"
 #include "AcMmo.h"
 #include "AcPilotOverlay.h"
 #include "AcPilotPawn.h"
 #include "AcSimSubsystem.h"
 
+#include "Act.h"
 #include "Mule.h"
 #include "Progression.h"
 #include "Rules.h"
@@ -198,7 +203,8 @@ void UAcGameFlowSubsystem::TickMmoMuleFlow(const FString& Step)
 		}
 		MuleFlow.Foundry = F->id;
 		MuleFlow.Prospector = U->id;
-		WalkTo(F->position, ac::Rules::radius(F->kind) + 1.8, F->position);
+		// By its call post, the crosshair on its button.
+		if (WalkTo(F->position + ac::Act::foundryPostAt(ac::Rules::radius(F->kind)) + ac::Vec2(0.6, 1.0), 0.5)) Pilot->TestLookAtAct(AcActPick::EKind::Buy, F->id);
 		if (!Prompt.Contains(TEXT("BUY MULE")))
 		{
 			Waited(FString::Printf(TEXT("mule: at the Foundry \"E · BUY MULE\" (\"%s\")"), *Prompt), WalkSeconds);
@@ -223,6 +229,7 @@ void UAcGameFlowSubsystem::TickMmoMuleFlow(const FString& Step)
 		if (!MuleFlow.bAsked && Since() > 1.0 && !(P && P->mule))
 		{
 			MuleFlow.bAsked = true;
+			Pilot->TestLookAtAct(AcActPick::EKind::Buy, MuleFlow.Foundry);
 			PressE();
 		}
 		if (!(P && P->mule && Side.ore <= MuleFlow.Ore - ac::Mule::ore()))
@@ -305,7 +312,7 @@ void UAcGameFlowSubsystem::TickMmoMuleFlow(const FString& Step)
 		}
 		if (!MuleFlow.bPressed)
 		{
-			WalkTo(ac::Mule::hopper(*Mule) + ac::Vec2(1.2, 0), 0.6, ac::Mule::hopper(*Mule));
+			if (WalkTo(ac::Mule::hopper(*Mule) + ac::Vec2(1.2, 0), 0.6, ac::Mule::hopper(*Mule))) Pilot->TestLookAtAct(AcActPick::EKind::Fill, Mule->id);
 			if (!Prompt.Contains(TEXT("FILL")))
 			{
 				Waited(FString::Printf(TEXT("mule: at the hopper \"E · FILL THE MULE\" (\"%s\")"), *Prompt), WalkSeconds);
@@ -338,7 +345,7 @@ void UAcGameFlowSubsystem::TickMmoMuleFlow(const FString& Step)
 		if (!MuleFlow.bPressed)
 		{
 			const ac::Vec2 Perch = ac::Mule::perch(*Mule);
-			WalkTo(ac::Mule::point(*Mule, ac::Vec2(ac::Mule::perchLocal.x, -1.4)), 0.6, Perch);
+			if (WalkTo(ac::Mule::point(*Mule, ac::Vec2(ac::Mule::perchLocal.x, -1.4)), 0.6, Perch)) Pilot->TestLookAtAct(AcActPick::EKind::Board, Mule->id);
 			if (!Prompt.Contains(TEXT("CLIMB ON")))
 			{
 				Waited(FString::Printf(TEXT("mule: at the perch \"E · CLIMB ON\" (\"%s\", %.2f cells from the perch, task %d)"), *Prompt,
@@ -396,9 +403,15 @@ void UAcGameFlowSubsystem::TickMmoMuleFlow(const FString& Step)
 	}
 	case 9:
 	{
+		// Nothing under the crosshair in reach (level, along the hull):
 		// "E · CLIMB OFF": E, and the pilot is on foot again.
 		if (!MuleFlow.bPressed)
 		{
+			if (U->kind == ac::UnitKind::mule)
+			{
+				Pilot->SetTestInput(FVector2D::ZeroVector, U->heading);
+				Pilot->Look(0.0, Pilot->ViewPitch() / AAcPilotPawn::PitchPerPoint);
+			}
 			if (!Prompt.Contains(TEXT("CLIMB OFF")))
 			{
 				Waited(FString::Printf(TEXT("mule: aboard \"E · CLIMB OFF\" (\"%s\")"), *Prompt), AskSeconds);

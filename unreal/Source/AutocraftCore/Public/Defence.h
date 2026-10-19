@@ -82,8 +82,6 @@ struct AUTOCRAFTCORE_API Defence {
     /// station (inside the solid Citadel: `man` refuses, nothing is sheltered).
     static double stationInset() { return Rules::citadelHall() ? 4.0 : 1.5; }
     static Vec2 gunStation(Vec2 citadel, int i);
-    /// A pilot within this many cells of a station mans its gun.
-    static constexpr double stationReach = 1.5;
     /// Gun `i`'s camera (the game's view at a gun), riding the cradle so the
     /// barrels stay in frame from `gunPitchMin` to `gunPitchMax`: the mount
     /// (its top at `mountHeight`) + R_yaw(aim) · [trunnion + R_pitch(pitch) ·

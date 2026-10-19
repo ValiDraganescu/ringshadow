@@ -97,6 +97,7 @@ grep -E "flowtest|menu:" $S/flow.log
 ```
 
 - Done when each step logs `flowtest: STEP: … ok` and the last line reads `flowtest: done, 0 failed`. `FAILED` marks a step.
+- An E act in an MMO flow (a door, a gun, the Mule, a call post, the ship's buttons) works only with the crosshair on its box within reach ([docs/acting.md](../../../docs/acting.md)): walk to a spot in reach, `Pilot->TestLookAtAct(AcActPick::EKind::…, id)` each frame, check the prompt, then `Pilot->Press(true, true)` and `Press(false, true)`. `Press(true)` alone is the click: the core's acts only.
 - `-AcSaveDir=` keeps the run out of the user's real saves; the save checks need no `-AcNoSave`. `-AcImport=PATH` feeds the `import` step a session file.
 - Staging flags for a look at one state (`-AcScene=NAME`, `-AcWarm=S`, `-AcPaused`, `-AcStage=N`) are in `unreal/SHOTS.md` and `unreal/GAME-LAYER.md`.
 

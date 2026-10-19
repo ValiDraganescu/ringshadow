@@ -10,8 +10,9 @@
 //             holds the dummy out and the act key puts it down (the server
 //             builds it: no blueprint, 10 ore). Then the gun: the server's
 //             dev line puts a complete Citadel ahead (`citadel here`); the
-//             pilot opens its door (the act key at the doorstep), walks into
-//             the hall to gun 1's station and takes it (the act key); `dummy here 15` stands a
+//             pilot opens its door (at the doorstep, the crosshair on the
+//             door, E: C5's rule), walks into the hall to gun 1's station and
+//             takes it (the crosshair on its console, E); `dummy here 15` stands a
 //             Target Dummy 15 cells out along the gun's aim. A short burst
 //             into the ground in front of it first; then the look turned
 //             onto it, pitched by the core's ballistic solve
@@ -39,6 +40,7 @@
 //   uv run unreal/Tools/hidden_run.py --out DIR --headless -- -AcFlowTest=mmopractice
 #include "AcGameFlow.h"
 
+#include "AcActPick.h"
 #include "AcBuildWheel.h"
 #include "AcLog.h"
 #include "AcMmo.h"
@@ -68,7 +70,8 @@ namespace
 {
 	constexpr double SeatSeconds = 20;
 	constexpr double AskSeconds = 8;
-	constexpr double WalkSeconds = 25;
+	// A walk's time on a loaded Mac (the server's steps slow down).
+	constexpr double WalkSeconds = 40;
 	/// Rounds at 1 a round on 150 hp, spun up: about six seconds.
 	constexpr double FallSeconds = 20;
 	/// How far out the dummy stands (close enough for the feed's pictures).
@@ -229,6 +232,12 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 	auto Press = [&] {
 		Pilot->Press(true);
 		Pilot->Press(false);
+		Practice.bPressed = true;
+	};
+	// E on the act the crosshair is on (C5, AcActPick.h).
+	auto PressE = [&] {
+		Pilot->Press(true, true);
+		Pilot->Press(false, true);
 		Practice.bPressed = true;
 	};
 	auto Structure = [&](const int64 Id) -> const ac::Structure* {
@@ -540,10 +549,19 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 			Waited(TEXT("practice: at the doorstep"), WalkSeconds);
 			return;
 		}
-		const ac::Vec2 In = C->position + ac::Vec2(0, 5.0) - U->position;
-		Pilot->SetTestInput(FVector2D::ZeroVector, std::atan2(In.y, In.x));
+		// The crosshair on the door itself (C5: E works only what it is on).
+		Pilot->SetTestInput(FVector2D::ZeroVector, Pilot->Yaw());
+		Pilot->TestLookAtAct(AcActPick::EKind::Door, C->id, 2);
 		if (!Settle(0.6)) return;
-		if (!Practice.bPressed) Press();
+		if (!Practice.bPressed)
+		{
+			if (Prompt != TEXT("E · OPEN"))
+			{
+				Waited(FString::Printf(TEXT("practice: the crosshair on the door, \"E · OPEN\" (\"%s\")"), *Prompt), AskSeconds);
+				return;
+			}
+			PressE();
+		}
 		Waited(FString::Printf(TEXT("practice: the door open (%s)"), *Mmo->HallRefusal()), WalkSeconds);
 		return;
 	}
@@ -573,8 +591,17 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		return;
 	}
 	case 14:
-		// The act key takes the gun.
-		if (!Practice.bPressed) Press();
+		// The crosshair on the station's console, E takes the gun.
+		if (!Practice.bPressed)
+		{
+			Pilot->TestLookAtAct(AcActPick::EKind::Gun, Practice.Citadel, 0);
+			if (Prompt != TEXT("E · TAKE GUN 1 SE") || !Settle(0.4))
+			{
+				Waited(FString::Printf(TEXT("practice: the crosshair on gun 1's console (\"%s\")"), *Prompt), AskSeconds);
+				return;
+			}
+			PressE();
+		}
 		if (U->task != ac::Unit::Task::atGun || Pilot->AtGun() != 0)
 		{
 			Waited(FString::Printf(TEXT("practice: at gun 1 (\"%s\", %s)"), *Prompt, *Mmo->HallRefusal()), AskSeconds);

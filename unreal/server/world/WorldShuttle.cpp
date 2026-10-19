@@ -7,6 +7,7 @@
 
 #include "WorldMap.h"
 
+#include "Act.h"
 #include "Shuttle.h"
 #include "WorldAtlas.h"
 
@@ -101,7 +102,11 @@ std::optional<std::string> WorldMap::callShuttle(PilotId pilot) {
         if (o.region != p->region) continue;
         const double d = distance(o.at, u->position);
         const double within = o.kind == StructureKind::spacedock ? std::max(reach, Rules::radius(o.kind) + WorldRoles::buildingPadReach) : reach;
-        if (d <= within && d < best) {
+        // C5: a realm Landing Pad also at its call post (Act.h), which
+        // stands off its corner.
+        const auto building = o.kind == StructureKind::landingPad && o.building ? sim.state.structure(o.building) : std::nullopt;
+        const bool atPost = building && Act::gap(*u, Act::padPost(*building)) <= Act::serverReach;
+        if ((d <= within || atPost) && d < best) {
             best = d;
             pad = o;
         }

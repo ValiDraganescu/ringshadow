@@ -2,6 +2,7 @@
 // shape, the ramp and its button, the take-off button's refusals, the riders
 // carried and untouchable, the touch down, the empty ship leaving, its pose,
 // from hand-built scenes of a few seconds.
+#include "Act.h"
 #include "Mule.h"
 #include "Shuttle.h"
 #include "HallScene.h"
@@ -152,7 +153,6 @@ TEST(pilot_walksUpTheRampIntoTheBay) {
 }
 
 TEST(shuttle_rampButtonAndItsRefusals) {
-    const Vec2 post(ShuttleBay::rampButton.x, ShuttleBay::rampButton.y);
     Bay b = bayScene(kPad + Vec2(-1.6, -0.3));
     // Far from the post in the bay, or outside: refused.
     Bay far = bayScene(kPad + Vec2(1.5, 0));
@@ -161,7 +161,7 @@ TEST(shuttle_rampButtonAndItsRefusals) {
     EXPECT_EQ(out.sim.ramp(out.pilot, out.ship, false).value_or(""), std::string("Too far from the ramp button"));
     // Someone on the ramp: it won't shut.
     addUnitAt(b, kPad + Vec2(-3.4, 0.2));
-    EXPECT_TRUE(length(localOf(b, b.pilot) - post) <= ShuttleBay::reach);
+    EXPECT_TRUE(Act::gap(unitOf(b.sim, b.pilot), Act::rampPost(*b.sim.shuttle(b.ship))) <= Act::reach);
     EXPECT_EQ(b.sim.ramp(b.pilot, b.ship, false).value_or(""), std::string("Someone is on the ramp"));
     // At the post, by the opening, it is not on the ramp itself.
     Bay atPost = bayScene(kPad + Vec2(-2.15, -0.35));

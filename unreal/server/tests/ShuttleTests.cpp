@@ -7,6 +7,7 @@
 
 #include "test.h"
 
+#include "Act.h"
 #include "Mule.h"
 #include "ShuttleBoard.h"
 #include "WorldMap.h"
@@ -221,7 +222,7 @@ TEST(shuttle_dev_ferry_mule_drives_up_the_ramp) {
     ASSERT_TRUE(!w.drivesMule(a));
     const auto own = w.mule(a);
     ASSERT_TRUE(own.has_value());
-    EXPECT_TRUE(distance(drivenBy(w, a)->position, Mule::perch(*w.regionOf(a)->simulation().state.unit(own->second))) <= Mule::reach);
+    EXPECT_TRUE(Act::gap(*drivenBy(w, a), Act::perch(*w.regionOf(a)->simulation().state.unit(own->second))) <= Act::reach);
     ASSERT_TRUE(!w.take(a, own->second));
     w.step();
     ASSERT_TRUE(w.drivesMule(a));

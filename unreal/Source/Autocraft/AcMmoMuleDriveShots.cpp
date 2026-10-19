@@ -23,6 +23,7 @@
 //   uv run unreal/Tools/hidden_run.py --out DIR -- -AcFlowTest=mmomuledrive -AcMmoShots={out} -AcMmoClockHour=11
 #include "AcGameFlow.h"
 
+#include "AcActPick.h"
 #include "AcLog.h"
 #include "AcMmo.h"
 #include "AcPilotOverlay.h"
@@ -240,6 +241,8 @@ void UAcGameFlowSubsystem::TickMmoMuleDriveShots(const FString& Step)
 		{
 			const ac::Vec2 D = ac::Mule::perch(*Mule) - U->position;
 			Pilot->SetTestInput(FVector2D::ZeroVector, std::atan2(D.y, D.x));
+			// The crosshair on the perch (C5: E works only what it is on).
+			Pilot->TestLookAtAct(AcActPick::EKind::Board, Mule->id);
 			if (!Settle(1.0)) return;
 			Press();
 		}

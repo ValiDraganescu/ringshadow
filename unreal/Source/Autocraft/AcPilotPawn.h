@@ -137,6 +137,7 @@
 #include "GameFramework/Pawn.h"
 #include "InputActionValue.h"
 
+#include "AcActPick.h"
 #include "AcPilotCamera.h"
 #include "AcPilotChase.h"
 #include "AcDemolish.h"
@@ -207,10 +208,23 @@ public:
 	/// view's right-drag turn uses it too).
 	static double LookGain(FVector2D Raw, float Dt);
 	static constexpr double YawPerPoint = 0.0032, PitchPerPoint = 0.0026;
-	/// The act key went down or up (`pilotPress`). `bKeyE`: it was E, which
-	/// on a realm building in reach starts the demolish hold instead of
-	/// acting (C3, AcDemolish.h); the click and Space always act.
+	/// The act key went down or up (`pilotPress`). `bKeyE`: it was E. In the
+	/// MMORPG mode E works only what the crosshair is on in reach (C5,
+	/// AcActPick.h: `CurrentAct`), the demolish hold included, and nothing
+	/// else; the click and Space keep the core's acts (fire, drill, weld,
+	/// repair, enter). At a gun every key fires.
 	void Press(bool bDown, bool bKeyE = false);
+	/// C5: what E does now (unset: nothing), and the act's box under the
+	/// crosshair, worked out each frame from the crosshair's ray.
+	const TOptional<AcActPick::FAct>& CurrentAct() const { return ActNow; }
+	const TOptional<AcActPick::FTarget>& CurrentActBox() const { return ActBox; }
+	/// Scripted tests: turn the look so the crosshair's ray (from the
+	/// camera's eye as last drawn) runs through `Target` (world cm).
+	void TestLookAt(const FVector& Target);
+	/// The same at the middle of an act's box (the picker's own: `Kind`,
+	/// its thing `Id` (0: any), `Index` (INDEX_NONE: any)); false: no such
+	/// box near the driven unit.
+	bool TestLookAtAct(AcActPick::EKind Kind, int64 Id = 0, int32 Index = INDEX_NONE);
 	/// C3: the building E would demolish now (INDEX_NONE: none), and the
 	/// hold's fill while E is held on it (unset: not held).
 	int64 DemolishTarget() const;
@@ -265,6 +279,9 @@ public:
 	{
 		FVector Point = FVector::ZeroVector;
 		int64 Target = INDEX_NONE;
+		/// The ray cast (C5's acts use it): its start past the driven
+		/// unit and its far end (zero: a staged crosshair, no ray).
+		FVector From = FVector::ZeroVector, To = FVector::ZeroVector;
 	};
 	const TOptional<FCrosshair>& Crosshair() const { return Cross; }
 	/// The yaw the mouse gives (world radians, as `heading`).
@@ -409,6 +426,12 @@ private:
 	bool bHold = false;
 	/// C3: E held on a building to demolish it.
 	AcDemolish::FHold DemolishHold;
+	/// C5: E's act and its box this frame (`UpdateAct`, after the crosshair).
+	TOptional<AcActPick::FAct> ActNow;
+	TOptional<AcActPick::FTarget> ActBox;
+	void UpdateAct(const ac::Simulation& S, const ac::Unit& U, double Feet);
+	/// What the picker needs of the world (the ground, the ships drawn).
+	AcActPick::FWorld ActWorld(double Feet) const;
 	bool bAbilityHeld = false;
 	bool bThird = false;
 	/// The console whose view switch is bound to `ToggleView`.

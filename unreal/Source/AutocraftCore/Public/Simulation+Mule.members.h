@@ -11,8 +11,8 @@ public:
     std::optional<int64_t> ridden(const Unit& u) const;
     /// Why Prospector `u` can't climb onto Mule `m` now, or nil: `u` a
     /// Prospector of `m`'s side on foot, `m` a Mule with no one aboard, `u`
-    /// within `Mule::reach` of its perch. (Whose Mule it is, the server
-    /// checks.)
+    /// within `Act::serverReach` of its perch (`Act::perch`). (Whose Mule it
+    /// is, the server checks.)
     std::optional<std::string> muleBoardRefusal(const Unit& u, const Unit& m) const;
     /// Prospector `prospector` climbs onto Mule `mule`: aboard it, on its
     /// perch, riding along. The refusal, or nil. The server then gives its
@@ -23,7 +23,7 @@ public:
     /// rides it.
     std::optional<int64_t> muleLeave(int64_t mule);
     /// Why Prospector `u` can't put its load into Mule `m` now, or nil: `u`
-    /// on foot and carrying, within `Mule::reach` of the hopper, the Mule
+    /// on foot and carrying, within `Act::serverReach` of the hopper, the Mule
     /// below `Mule::capacity` (`Mule::full`).
     std::optional<std::string> muleFillRefusal(const Unit& u, const Unit& m) const;
     /// Prospector `prospector` puts its whole load into Mule `mule`'s

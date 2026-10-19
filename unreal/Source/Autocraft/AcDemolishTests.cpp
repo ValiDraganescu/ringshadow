@@ -4,10 +4,12 @@
 //   UnrealEditor Autocraft.uproject -nullrhi -unattended -nosplash -nosound
 //     -ExecCmds="Automation RunTests Autocraft.Pilot.DemolishHold; Quit"
 //     -TestExit="Automation Test Queue Empty"
+#include "AcActPick.h"
 #include "AcDemolish.h"
 
 #include "Misc/AutomationTest.h"
 
+#include "Act.h"
 #include "Rules.h"
 #include "Types.h"
 
@@ -62,7 +64,9 @@ bool FAcDemolishHoldTest::RunTest(const FString&)
 		TestFalse(TEXT("nothing under the sight"), H.Tick(INDEX_NONE, 3.2).IsSet());
 		TestFalse(TEXT("cancelled again"), H.Active());
 	}
-	// The target: the realm's building in the repair reach, not past it, not another side's.
+	// The target (AcActPick): the realm's building the crosshair is on in
+	// reach, not past it, not another side's, not with an act's box on the
+	// crosshair.
 	{
 		ac::GameState S;
 		S.players = {ac::Player{}, ac::Player{}};
@@ -73,11 +77,15 @@ bool FAcDemolishHoldTest::RunTest(const FString&)
 		ac::Simulation Sim(S, std::nullopt);
 		ac::Unit U(9, ac::UnitKind::prospector, ac::Pilot::player, ac::Vec2(20 - ac::Rules::radius(ac::StructureKind::gatling) - 0.5, 20), 0,
 			ac::Unit::Task::idle);
-		TestTrue(TEXT("in reach"), AcDemolish::Target(Sim, U, 7) == TOptional<int64>(7));
-		TestFalse(TEXT("nothing under the sight"), AcDemolish::Target(Sim, U, INDEX_NONE).IsSet());
-		TestFalse(TEXT("another side's"), AcDemolish::Target(Sim, U, 8).IsSet());
-		U.position = ac::Vec2(10, 20);
-		TestFalse(TEXT("out of reach"), AcDemolish::Target(Sim, U, 7).IsSet());
+		auto Down = [&](const int64 Crosshair, const double Gap, const bool bOnBox = false) {
+			const TOptional<AcActPick::FAct> A = AcActPick::Act(Sim, U, AcMuleAct::FOwn(), {}, bOnBox, Crosshair, Gap);
+			return A && A->Kind == AcActPick::EKind::Demolish ? A->Id : int64(INDEX_NONE);
+		};
+		TestEqual(TEXT("in reach"), Down(7, 0.5), int64(7));
+		TestEqual(TEXT("nothing under the sight"), Down(INDEX_NONE, 0.5), int64(INDEX_NONE));
+		TestEqual(TEXT("another side's"), Down(8, 0.5), int64(INDEX_NONE));
+		TestEqual(TEXT("out of reach"), Down(7, ac::Act::reach + 0.1), int64(INDEX_NONE));
+		TestEqual(TEXT("an act's box under the crosshair"), Down(7, 0.5, true), int64(INDEX_NONE));
 	}
 	TestEqual(TEXT("prompt"), AcDemolish::Prompt(ac::StructureKind::gatling), FString(TEXT("HOLD E · DEMOLISH GATLING GUN · +62 ORE +12 MH")));
 	TestEqual(TEXT("prompt, no MH"), AcDemolish::Prompt(ac::StructureKind::dummy), FString(TEXT("HOLD E · DEMOLISH TARGET DUMMY · +5 ORE")));

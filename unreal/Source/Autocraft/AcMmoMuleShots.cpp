@@ -24,6 +24,7 @@
 //   uv run unreal/Tools/hidden_run.py --out DIR -- -AcFlowTest=mmomuleshots -AcMmoShots={out} -AcMmoClockHour=11
 #include "AcGameFlow.h"
 
+#include "AcActPick.h"
 #include "AcLog.h"
 #include "AcMmo.h"
 #include "AcPilotOverlay.h"
@@ -287,6 +288,8 @@ void UAcGameFlowSubsystem::TickMmoMuleShots(const FString& Step)
 		if (!Staged.bPressed)
 		{
 			Face(ac::Mule::perch(*Mule));
+			// The crosshair on the perch (C5: E works only what it is on).
+			Pilot->TestLookAtAct(AcActPick::EKind::Board, Mule->id);
 			if (!Settle(1.0)) return;
 			Check(Info && Info->MuleLoad && Info->MuleLoad->Contains(TEXT("380 ore, 120 MH")),
 				FString::Printf(TEXT("the HUD's line by the Mule (\"%s\")"), Info && Info->MuleLoad ? **Info->MuleLoad : TEXT("")));
@@ -377,6 +380,8 @@ void UAcGameFlowSubsystem::TickMmoMuleShots(const FString& Step)
 		if (!Staged.bPressed)
 		{
 			Face(ac::Mule::perch(*Mule));
+			// The crosshair on the perch (C5: E works only what it is on).
+			Pilot->TestLookAtAct(AcActPick::EKind::Board, Mule->id);
 			if (!Settle(1.0)) return;
 			Press();
 		}

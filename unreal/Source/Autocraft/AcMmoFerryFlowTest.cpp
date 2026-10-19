@@ -2,11 +2,13 @@
 // and 4), over the local server on the first world (build it first: make -C
 // unreal/server). The pilot does it all with its own walk and act key:
 //   mmoferry  the dev lines put a Landing Pad under the seated Prospector
-//             and one in Cold Fork and fill the MH; on the pad E calls the
-//             Dropship; it comes down, its ramp lowers; up the ramp into the
-//             bay (the third-person camera stays inside its walls); at the
-//             console with the ramp open the take-off button says "Close
-//             the ramp first"; at the ramp post E closes the ramp; at the
+//             and one in Cold Fork and fill the MH; at the pad's call post,
+//             the crosshair on its button, E calls the Dropship (C5: E works
+//             only what the crosshair is on, in reach); it comes down, its
+//             ramp lowers; up the ramp into the bay (the third-person camera
+//             stays inside its walls); at the console, the crosshair on the
+//             take-off button with the ramp open: "Close the ramp first"; at
+//             the ramp post, the crosshair on it, E closes the ramp; at the
 //             console E opens the flight menu, Cold Fork's pad is flown to;
 //             the lift, the dash and the approach seen through the
 //             windshield in first person; landed, E at the post lowers the
@@ -27,19 +29,20 @@
 //       [-AcMmoShots={out} -AcMmoShotsFerry -AcMmoWeather=rain]
 #include "AcGameFlow.h"
 
+#include "AcActPick.h"
 #include "AcLog.h"
 #include "AcMmo.h"
 #include "AcPilotCamera.h"
 #include "AcPilotChase.h"
 #include "AcPilotOverlay.h"
 #include "AcPilotPawn.h"
-#include "AcShuttleAct.h"
 #include "AcShuttleView.h"
 #include "AcSimSubsystem.h"
 #include "AcSpace.h"
 #include "AcWorldRenderer.h"
 #include "SAcWorldMap.h"
 
+#include "Act.h"
 #include "Mule.h"
 #include "Rules.h"
 #include "Shuttle.h"
@@ -178,7 +181,8 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 	Run.UnseatedAt = -1;
 	const TOptional<FAcPilotInfo>& Info = Overlay ? Overlay->LastInfo() : TOptional<FAcPilotInfo>();
 	const FString Prompt = Info && Info->Prompt ? *Info->Prompt : FString();
-	const TOptional<AcShuttleAct::FAct> Act = AcShuttleAct::Find(*S, *U);
+	// What E does now (C5): the pawn's, from its crosshair.
+	const TOptional<AcActPick::FAct> Act = Pilot->CurrentAct();
 	const ac::Shuttle* Ship = nullptr;
 	for (const ac::Shuttle& Q : S->state.shuttles)
 	{
@@ -205,10 +209,15 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		return Now - Run.Settled >= Seconds;
 	};
 	auto Press = [&] {
-		Pilot->Press(true);
-		Pilot->Press(false);
+		Pilot->Press(true, true);
+		Pilot->Press(false, true);
 		Run.bPressed = true;
 	};
+	// Where a pilot stands to press the ramp post and the take-off button
+	// (the ship's frame), and the crosshair onto either.
+	const ac::Vec2 PostStand(ac::ShuttleBay::rampButton.x + 0.71, ac::ShuttleBay::rampButton.y + 0.44);
+	const ac::Vec2 HelmStand(ac::ShuttleBay::takeOffButton.x - 0.6, 0.0);
+	auto AimButton = [&](const bool bTakeOff) { Pilot->TestLookAtAct(bTakeOff ? AcActPick::EKind::TakeOff : AcActPick::EKind::Ramp); };
 	// The look's pitch to `Want` (radians, up +), through the mouse.
 	auto Pitch = [&](const double Want) { Pilot->Look(0.0, (Pilot->ViewPitch() - Want) / 0.0026); };
 	auto FirstPerson = [&](const bool bFirst) {
@@ -258,21 +267,23 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 	{
 	case 2:
 	{
-		// Onto the pad's middle, then the call.
+		// To the pad's call post, the crosshair on its button, then the call.
 		const ac::Structure* Pad = nullptr;
 		for (const ac::Structure& B : S->state.structures)
 		{
 			if (B.kind != ac::StructureKind::landingPad || !B.complete()) continue;
 			if (!Pad || ac::distance(B.position, U->position) < ac::distance(Pad->position, U->position)) Pad = &B;
 		}
-		if (Pad && ac::distance(Pad->position, U->position) < 12 && !WalkTo(Pad->position, 0.3))
+		const ac::Vec2 Post = Pad ? Pad->position + ac::Act::padPostAt(ac::Rules::radius(Pad->kind)) : ac::Vec2();
+		if (Pad && ac::distance(Pad->position, U->position) < 12 && !WalkTo(Post + ac::Vec2(-0.6, 0.9), 0.3))
 		{
-			Waited(TEXT("onto the Landing Pad"), WalkSeconds);
+			Waited(TEXT("to the Landing Pad's call post"), WalkSeconds);
 			return;
 		}
-		if (Act && Act->Kind == AcShuttleAct::FAct::EKind::Call && !Act->Why && Mmo->HydrogenNow().value_or(0) >= 100 && Settle(1.0))
+		if (Pad) Pilot->TestLookAtAct(AcActPick::EKind::Call, Pad->id);
+		if (Act && Act->Kind == AcActPick::EKind::Call && !Act->Why && Mmo->HydrogenNow().value_or(0) >= 100 && Settle(1.0))
 		{
-			Check(Prompt == TEXT("E · CALL THE DROPSHIP"), FString::Printf(TEXT("ferry: on the pad the prompt calls the Dropship (\"%s\")"), *Prompt));
+			Check(Prompt == TEXT("E · CALL THE DROPSHIP"), FString::Printf(TEXT("ferry: at the call post the prompt calls the Dropship (\"%s\")"), *Prompt));
 			FirstPerson(false);
 			Press();
 			Advance();
@@ -346,10 +357,9 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 	case 5:
 		// At the console with the ramp down: refused.
 		if (!Ship) break;
-		if (WalkTo(ac::Vec2(1.9, 0.0), 0.25) && Settle(1.0))
+		if (WalkTo(HelmStand, 0.25) && (AimButton(true), Settle(1.0)))
 		{
-			Face(0.0);
-			Check(Act && Act->Kind == AcShuttleAct::FAct::EKind::TakeOff && Act->Why && *Act->Why == TEXT("Close the ramp first"),
+			Check(Act && Act->Kind == AcActPick::EKind::TakeOff && Act->Why && *Act->Why == TEXT("Close the ramp first"),
 				FString::Printf(TEXT("ferry: with the ramp down the take-off button says close it first (\"%s\")"), *Prompt));
 			Advance();
 		}
@@ -360,7 +370,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		if (!Ship) break;
 		if (!Run.bPressed)
 		{
-			if (WalkTo(ac::Vec2(-1.55, -0.4), 0.2) && Settle(1.0))
+			if (WalkTo(PostStand, 0.2) && (AimButton(false), Settle(1.0)))
 			{
 				Check(Prompt == TEXT("E · CLOSE THE RAMP"), FString::Printf(TEXT("ferry: at the post the prompt closes the ramp (\"%s\")"), *Prompt));
 				for (const ac::Unit& V : S->state.units)
@@ -388,11 +398,10 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		if (!Ship) break;
 		if (!Run.bPressed)
 		{
-			if (WalkTo(ac::Vec2(1.9, 0.0), 0.25) && Settle(1.0))
+			if (WalkTo(HelmStand, 0.25) && Settle(1.0))
 			{
-				Face(0.0);
 				FirstPerson(true);
-				Pitch(-0.62);
+				AimButton(true);
 				if (Now - Run.Settled < 1.6) return;
 				if (!Run.bLiftShot)
 				{
@@ -468,7 +477,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		if (!Ship) break;
 		if (!Run.bPressed)
 		{
-			if (WalkTo(ac::Vec2(-1.55, -0.4), 0.2) && Settle(1.0))
+			if (WalkTo(PostStand, 0.2) && (AimButton(false), Settle(1.0)))
 			{
 				Check(Prompt == TEXT("E · OPEN THE RAMP"), FString::Printf(TEXT("ferry: landed, the post opens the ramp (\"%s\")"), *Prompt));
 				Press();
@@ -558,18 +567,11 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 		// behind the ramp and up it, chasing a point 3 cells ahead on the axis.
 		// From the perch: the crosshair on the ramp post, E closes the ramp
 		// (still driving); the crosshair off the buttons, E would climb off.
-		auto AimAt = [&](const ac::Vec3& B) {
-			const AcShuttleView::FShip* F = AcShuttleView::Find(Ship->id);
-			if (!F || !PC || !PC->PlayerCameraManager) return;
-			const FVector To = F->Placement.TransformPosition(FVector(AcSpace::ToCm(B.x), AcSpace::ToCm(B.y), AcSpace::ToCm(B.z)));
-			const FVector D = (To - PC->PlayerCameraManager->GetCameraLocation()).GetSafeNormal();
-			Pilot->SetTestInput(FVector2D::ZeroVector, std::atan2(D.Y, D.X));
-			Pitch(std::asin(FMath::Clamp(D.Z, -1.0, 1.0)));
-		};
 		if (Run.Leg == 4)
 		{
-			AimAt(ac::ShuttleBay::rampButton);
-			if (!AcShuttleAct::DriverAim().bRampButton || Prompt != TEXT("E · CLOSE THE RAMP"))
+			AimButton(false);
+			const TOptional<AcActPick::FTarget>& On = Pilot->CurrentActBox();
+			if (!On || On->Kind != AcActPick::EKind::Ramp || Prompt != TEXT("E · CLOSE THE RAMP"))
 			{
 				Waited(FString::Printf(TEXT("mule: the crosshair on the ramp post, \"E · CLOSE THE RAMP\" (\"%s\")"), *Prompt), AskSeconds + 10);
 				return;

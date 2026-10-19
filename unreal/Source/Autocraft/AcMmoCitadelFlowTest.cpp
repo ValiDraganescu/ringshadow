@@ -5,10 +5,12 @@
 //
 //   mmocitadel  the server's dev line `citadel here` puts a complete realm
 //             Citadel ahead of the pilot, its door shut; the pilot walks to
-//             the door ("E · OPEN"), opens it on the act key, closes it
+//             the door, the crosshair on its panel ("E · OPEN": C5, E works
+//             only what the crosshair is on in reach), opens it on E, closes it
 //             from outside ("E · CLOSE", C4), opens it again, walks into the
 //             hall (sheltered), closes it from inside ("E · CLOSE"), walks to
-//             gun 1's station ("E · TAKE GUN 1 SE") and takes it: the view
+//             gun 1's station, the crosshair on its console ("E · TAKE GUN 1
+//             SE"), and takes it: the view
 //             first person at the gun's eye, the look held at the arc's hard
 //             stop, the feed up; fires (the Citadel's shots or misses come,
 //             the feed heats); Esc disengages; opens the door again and walks
@@ -52,6 +54,7 @@
 //   uv run unreal/Tools/hidden_run.py --out DIR --headless -- -AcFlowTest=mmocitadel
 #include "AcGameFlow.h"
 
+#include "AcActPick.h"
 #include "AcCitadelAct.h"
 #include "AcLog.h"
 #include "AcPilotBuild.h"
@@ -268,12 +271,17 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		if (Hall.Settled < 0) Hall.Settled = Now;
 		return Now - Hall.Settled >= Seconds;
 	};
+	// E on what the crosshair is on (C5, AcActPick.h).
 	auto Press = [&] {
-		Pilot->Press(true);
-		Pilot->Press(false);
+		Pilot->Press(true, true);
+		Pilot->Press(false, true);
 		Hall.bPressed = true;
 	};
-	const ac::Vec2 Doorstep(0, 7.0), InsideDoor(0, 3.8), Apron(0, 13.0);
+	// The crosshair on the door's panel on the pilot's side.
+	auto AimDoor = [&](const bool bInside) { Pilot->TestLookAtAct(AcActPick::EKind::Door, C->id, bInside ? 1 : 0); };
+	// Before the doorway, right of its middle: within reach of the door's
+	// panel on that side (beside the jamb, +x), walking straight through.
+	const ac::Vec2 Doorstep(0.8, 7.0), InsideDoor(0.8, 3.8), Apron(0, 13.0);
 	const bool bTps = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsTps"));
 	const bool bC3 = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC3"));
 	const bool bPictures = FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC1")) || bTps || bC3;
@@ -495,9 +503,9 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 			}
 		}
 		if (Since() < 1.0) return;
-		if (WalkTo(Doorstep, 0.6) && Settle(0.6))
+		if (WalkTo(Doorstep, 0.6) && (AimDoor(false), Settle(0.6)))
 		{
-			Check(Prompt == TEXT("E · OPEN"), FString::Printf(TEXT("at the door: \"%s\""), *Prompt));
+			Check(Prompt == TEXT("E · OPEN"), FString::Printf(TEXT("at the door, the crosshair on its panel: \"%s\""), *Prompt));
 			Advance();
 		}
 		else Waited(TEXT("at the doorstep"), WalkSeconds);
@@ -510,6 +518,7 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 			const bool bDone = bClosing ? C->door->open <= 0.01 && !C->door->opening : S->doorOpen(*C);
 			if (!Hall.bPressed)
 			{
+				AimDoor(false);
 				if (!Settle(0.6)) return;
 				Check(Prompt == (bClosing ? TEXT("E · CLOSE") : TEXT("E · OPEN")),
 					FString::Printf(TEXT("outside, the door %s: \"%s\""), bClosing ? TEXT("open") : TEXT("shut"), *Prompt));
@@ -527,7 +536,11 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 				*Mmo->HallRefusal()), AskSeconds);
 			return;
 		}
-		if (Hall.Gate == 0 && !Hall.bPressed) Press();
+		if (Hall.Gate == 0 && !Hall.bPressed)
+		{
+			AimDoor(false);
+			Press();
+		}
 		if (Hall.Gate == 0 && S->doorOpen(*C))
 		{
 			Check(Mmo->HallRefusal().IsEmpty(), TEXT("the door opened on the act key"));
@@ -584,6 +597,7 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 				C->door->opening ? TEXT(" opening") : TEXT(" shutting")), WalkSeconds);
 			return;
 		}
+		if (!Hall.bInside) AimDoor(true);
 		if (!Settle(0.8)) return;
 		if (!Hall.bInside)
 		{
@@ -651,7 +665,11 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 	}
 	case 5:
 		// Shut behind it, from inside.
-		if (!Hall.bPressed) Press();
+		if (!Hall.bPressed)
+		{
+			AimDoor(true);
+			Press();
+		}
 		if (C->door->open <= 0.01 && !C->door->opening)
 		{
 			// The picture looks into the hall, its stations and lamps.
@@ -673,9 +691,9 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		// To gun 1's station, in the hall's NE corner.
 		if (Since() < 1.0) return;
 		const ac::Vec2 Station = ac::Defence::gunStation(C->position, 0) - C->position;
-		if (WalkTo(Station, 0.7) && Settle(0.6))
+		if (WalkTo(Station, 0.7) && (Pilot->TestLookAtAct(AcActPick::EKind::Gun, C->id, 0), Settle(0.6)))
 		{
-			Check(Prompt == TEXT("E · TAKE GUN 1 SE"), FString::Printf(TEXT("at the station: \"%s\""), *Prompt));
+			Check(Prompt == TEXT("E · TAKE GUN 1 SE"), FString::Printf(TEXT("at the station, the crosshair on its console: \"%s\""), *Prompt));
 			Advance();
 		}
 		else Waited(TEXT("at gun 1's station"), WalkSeconds);
@@ -683,7 +701,11 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 	}
 	case 7:
 	{
-		if (!Hall.bPressed) Press();
+		if (!Hall.bPressed)
+		{
+			Pilot->TestLookAtAct(AcActPick::EKind::Gun, C->id, 0);
+			Press();
+		}
 		if (U->task != ac::Unit::Task::atGun || Pilot->AtGun() != 0 || !Settle(0.5))
 		{
 			Waited(FString::Printf(TEXT("at the gun (%s)"), *Mmo->HallRefusal()), AskSeconds);
@@ -772,7 +794,7 @@ void UAcGameFlowSubsystem::TickMmoCitadelFlow(const FString& Step)
 		return;
 	case 10:
 		// Back to the door, open it from inside...
-		if (WalkTo(InsideDoor, 0.5) && Settle(0.6))
+		if (WalkTo(InsideDoor, 0.5) && (Hall.bPressed || (AimDoor(true), true)) && Settle(0.6))
 		{
 			if (!Hall.bPressed)
 			{

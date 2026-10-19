@@ -8,6 +8,7 @@
 #include "CitadelHall.h"
 #include "SimHelpers.h"
 
+#include "Act.h"
 #include "Defence.h"
 #include "Simulation.h"
 #include "WindowMaps.h"
@@ -201,8 +202,8 @@ TEST(pilot_standsAtEveryStationButNotInTheConsole) {
             }
         }
         EXPECT_TRUE(distance(u.position, station) < 0.25);
-        // Still within reach of the station to man the gun.
-        EXPECT_TRUE(distance(u.position, station) < Defence::stationReach);
+        // Still within reach of the console to man the gun.
+        EXPECT_TRUE(Act::gap(u, Act::console(Structure(-1, Structure::Kind::citadel, 0, at), k)) <= Act::reach);
     }
 }
 

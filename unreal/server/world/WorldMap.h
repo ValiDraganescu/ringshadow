@@ -992,12 +992,12 @@ public:
 
     /// The pilot opens (`open`) or closes the door of the realm's complete
     /// Citadel nearest its Prospector in its region (`Simulation::door`:
-    /// within `Rules::doorReach` of the door slab, either side; to close,
+    /// within `Act::serverReach` of the door's leaf or panels, either side; to close,
     /// the doorway clear). The reason when refused.
     std::optional<std::string> door(PilotId pilot, bool open);
     /// The pilot's Prospector mans corner gun `gun` (0 to 3) of the realm's
     /// Citadel it is sheltered in (`Simulation::man`: within
-    /// `Defence::stationReach` of the gun's station, the gun free), or
+    /// `Act::serverReach` of the gun's console, the gun free), or
     /// leaves the gun it mans (-1). The reason when refused.
     std::optional<std::string> man(PilotId pilot, int gun);
     /// A human pilot is on line in region `r`, on the ground (not in
@@ -1074,11 +1074,12 @@ public:
     /// region, paid from its wallet (`Mule::ore`, `Mule::hydrogen`); it rolls
     /// out of the Foundry's door `Mule::rollOut` s later (the world's clock,
     /// on line or not). One a pilot: refused while it has one (rolling out
-    /// or out); a destroyed one frees the slot.
+    /// or out); a destroyed one frees the slot. C5: its unit within
+    /// `Act::serverReach` of the Foundry's call post (`Act::foundryPost`).
     std::optional<std::string> buyMule(PilotId pilot, int64_t foundry);
     /// The pilot's Prospector, on foot with a load, puts it all into its own
-    /// Mule `mule` (`Simulation::muleFill`: within `Mule::reach` of the
-    /// hopper, refused at `Mule::capacity`). No XP, no wallet: the Mule books
+    /// Mule `mule` (`Simulation::muleFill`: within `Act::serverReach` of
+    /// the hopper, refused at `Mule::capacity`). No XP, no wallet: the Mule books
     /// it when driven into a Citadel's hall (`Simulation::stepMules`; the XP
     /// and the rest in `workAfter`, the realm's cut in `realmTaxes`).
     std::optional<std::string> muleFill(PilotId pilot, int64_t mule);

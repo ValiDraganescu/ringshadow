@@ -8,6 +8,7 @@
 
 #include "test.h"
 
+#include "Act.h"
 #include "Mule.h"
 #include "Rules.h"
 #include "WorldMap.h"
@@ -144,6 +145,13 @@ TEST(mule_boughtAtTheFoundryRollsOutIn20s) {
     EXPECT_TRUE(w.buyMule(a, *foundry).value_or("") == "Not enough MH: you have 100");
     fill(w, a, 1000, 300);
     EXPECT_TRUE(w.buyMule(a, *foundry + 1000).value_or("") == "Buy the Mule at a finished Foundry");
+    // C5: only at its call post.
+    Unit* me = drivenUnit(w, a);
+    ASSERT_TRUE(me != nullptr);
+    const Vec2 was = me->position;
+    me->position = was + Vec2(0, Act::serverReach + 2);
+    EXPECT_TRUE(w.buyMule(a, *foundry).value_or("") == "Too far from the Foundry's post");
+    me->position = was;
     EXPECT_TRUE(!w.buyMule(a, *foundry));
     EXPECT_EQ(w.wallet(a)->ore, int64_t(400));
     EXPECT_EQ(w.wallet(a)->hydrogen, int64_t(150));
@@ -179,7 +187,7 @@ TEST(mule_onlyItsOwnerBoardsIt) {
     WorldMap& w = y.w;
     const int64_t prospector = *w.regionOf(a)->driving(a);
     Unit* m = unitOf(w, a, *y.mule);
-    unitOf(w, a, prospector)->position = Mule::perch(*m) + Vec2(0, Mule::reach + 1);
+    unitOf(w, a, prospector)->position = Mule::perch(*m) + Vec2(0, Act::serverReach + 1.5);
     EXPECT_TRUE(w.take(a, *y.mule).value_or("") == "Get to the Mule's perch");
     unitOf(w, a, prospector)->position = Mule::perch(*m) + Vec2(0, 1);
     EXPECT_TRUE(!w.take(a, *y.mule));
@@ -268,7 +276,7 @@ TEST(mule_doorLineStagesTheDrive) {
     EXPECT_TRUE(w.devMule("mule door").rfind("dev: mule door: mule ", 0) == 0);
     const Unit* m = unitOf(w, a, *y.mule);
     EXPECT_TRUE(distance(m->position, y.centre + Vec2(0, 9.5)) < 1e-9);
-    EXPECT_TRUE(distance(unitOf(w, a, prospector)->position, Mule::hopper(*m)) < Mule::reach);
+    EXPECT_TRUE(Act::gap(*unitOf(w, a, prospector), Act::hopper(*m)) <= Act::reach);
     unitOf(w, a, prospector)->position = Mule::perch(*m) + Vec2(1.0, 0);
     ASSERT_TRUE(!w.take(a, *y.mule));
     w.devMule("mule load 50 0");
@@ -400,7 +408,7 @@ TEST(mule_savedWithItsLoad) {
     const Unit* p = drivenUnit(w, a);
     ASSERT_TRUE(p != nullptr && p->kind == UnitKind::prospector);
     EXPECT_TRUE(p->task != Unit::Task::aboard);
-    EXPECT_TRUE(distance(p->position, Mule::perch(*m)) < Mule::reach);
+    EXPECT_TRUE(Act::gap(*p, Act::perch(*m)) <= Act::reach);
 }
 
 /// A Mule still rolling out at the save is saved out of its door, paid.

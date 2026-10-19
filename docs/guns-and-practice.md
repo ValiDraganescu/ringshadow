@@ -400,9 +400,10 @@ finished or a scaffold:
   sooner, or looking off the building, does nothing.
 - **The key split:** only E holds to demolish. The click and Space keep
   every act they have (fire, weld a scaffold, mend, enter a Derrick), so
-  firing at a Target Dummy or welding a scaffold never takes it down. The
-  Citadel's own E acts (the door, a gun station, `AcCitadelAct`) come first
-  where they apply.
+  firing at a Target Dummy or welding a scaffold never takes it down. Since
+  C5 ([acting.md](acting.md)) E holds to demolish only when no act's
+  box (a door panel, a console, a call post) is under the crosshair, and the
+  point hit is within `ac::Act::reach` of the body.
 - **Top-down, nothing driven:** a selected building's card has one button,
   DEMOLISH, held down 1.5 s with the mouse (a bar fills along its foot); it
   reaches any realm building in the pilot's region.

@@ -1,11 +1,11 @@
 // `AcDemolish`: taking down a realm building by hand (C3,
 // docs/guns-and-practice.md "Limits per region and demolish"). Driving, E
 // held for `ac::Rules::demolishHold` on a building of the realm under the
-// crosshair within the repair reach (`Simulation::demolishReach`) asks the
-// server to demolish it; let go sooner, or look off it, and nothing happens.
-// Only E: the click and Space keep every act they have (fire, weld, mend,
-// enter), and the Citadel's E acts (door, gun station, `AcCitadelAct`) come
-// first. The pawn holds the key (`FHold`), the cockpit shows the prompt and
+// crosshair within the act's reach (`AcActPick`: the body's edge within
+// `ac::Act::reach` of the point the crosshair is on, no act's box under it)
+// asks the server to demolish it; let go sooner, or look off it, and
+// nothing happens. Only E: the click and Space keep every act they have
+// (fire, weld, mend, enter). The pawn holds the key (`FHold`), the cockpit shows the prompt and
 // the ring (`FAcPilotInfo::Demolish`); the top-down console's DEMOLISH button
 // holds the same time on the selected building.
 //
@@ -18,11 +18,6 @@
 
 namespace AcDemolish
 {
-	/// The building E would demolish for driven unit `U` with `Crosshair`
-	/// (an id, INDEX_NONE: nothing) under the sight: the realm's
-	/// (`ac::Pilot::player`'s), within the repair reach. Unset: none.
-	AUTOCRAFT_API TOptional<int64> Target(const ac::Simulation& Sim, const ac::Unit& U, int64 Crosshair);
-
 	/// "HOLD E · DEMOLISH GATLING GUN · +62 ORE +12 MH" (no MH part when it
 	/// gives none back); with `Key` empty (the console's button) "DEMOLISH
 	/// GATLING GUN · +62 ORE +12 MH".

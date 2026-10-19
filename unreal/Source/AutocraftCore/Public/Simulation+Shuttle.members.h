@@ -15,14 +15,14 @@ public:
     /// grounded one's bay or on its ramp (nil: none).
     const Shuttle* aboard(const Unit& u) const;
     /// Why unit `u` can't work the ramp of `s` (`open`: down; else shut)
-    /// now, or nil: within `ShuttleBay::reach` of the ramp button, inside;
+    /// now, or nil: within `Act::serverReach` of the ramp button's box, inside;
     /// on the ground; to shut it, nobody on the ramp.
     std::optional<std::string> rampRefusal(const Shuttle& s, const Unit& u, bool open) const;
     /// Unit `unit` works the ramp of Dropship `shuttle`: the refusal, or nil
     /// once the ramp is on its way.
     std::optional<std::string> ramp(int64_t unit, int64_t shuttle, bool open);
     /// Why unit `u` can't press the take-off button of `s` now, or nil:
-    /// within `ShuttleBay::reach` of it, inside; on the ground; the ramp
+    /// within `Act::serverReach` of its box, inside; on the ground; the ramp
     /// shut ("Close the ramp first").
     std::optional<std::string> takeOffRefusal(const Shuttle& s, const Unit& u) const;
     /// Dropship `shuttle` lifts off for the flight `plan` from its pad

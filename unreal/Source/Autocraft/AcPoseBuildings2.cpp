@@ -42,6 +42,7 @@ namespace
 		static const FPart Trolley(TEXT("trolley")), Arm(TEXT("weldArm")), Dish(TEXT("dish")), DoorLight(TEXT("light_2")),
 			WeldLight(TEXT("light_4")), BaySparksAt(TEXT("emitter_1")), SparksAt(TEXT("emitter_3")), SteamAt(TEXT("emitter_5"));
 		ProductionLamps(M, P, Progress, Queue, bWorking, Progress01.value_or(0.0), S.queueCount(), bLive, Ph, 0.04);
+		CallPost(C, P, bLive);
 
 		GlowGroup(M, P, FloodGlow, !bLive ? 0.1 : bWorking ? Glow(Ph, 0.65) : 1.2, 2.0);
 		GlowGroup(M, P, VentGlow, !bLive ? 0.1 : bWorking ? Glow(Ph, 0) : 1.1 + 0.25 * std::sin(Ph * 1.1), 1.8);
@@ -402,6 +403,7 @@ namespace
 			if (L == INDEX_NONE) continue;
 			Lamp(P, L, !bLive ? 0.05 : bBusy ? Glow(Ph, K < 2 ? 0.0 : 0.65) : 1.2, 2.0);
 		}
+		CallPost(C, P, bLive);
 	}
 
 	// MARK: Target Dummy (C2, docs/guns-and-practice.md §3; Tools/Editor/models/dummy.py)

@@ -153,6 +153,14 @@ namespace AcBuildingPose
 	/// The Prospector building `S` is welding it (`builder.task == .building`).
 	bool Welding(const FAcPoseContext& C);
 
+	/// C5 (docs/acting.md): a Landing Pad's or a Foundry's call post
+	/// (call_posts.py: `callPost`, `callButton`) moved to the core's point
+	/// (`ac::Act::padPostAt` / `foundryPostAt`), its size kept when the
+	/// building is drawn stretched, shown once the building stands; its
+	/// button lit, brighter while the pilot's crosshair is on it
+	/// (`AcActPick::Lit`).
+	void CallPost(const FAcPoseContext& C, FAcPose& P, bool bLive);
+
 	/// What every building does first: the construction weld (`bWelding`),
 	/// the beacon, `bAnimated` once complete. Returns `complete`.
 	bool CommonPose(const FAcPoseContext& C, FAcPose& P, bool bWelding);

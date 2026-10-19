@@ -1,13 +1,10 @@
-// `AcCitadelAct`: what the act key does in and at a Citadel (C1,
-// docs/citadel-interior.md §7) when nothing else takes it (the drill, a
-// strike, a repair, a Derrick, a building held out come first): a free gun
-// station within `Defence::stationReach` ("E · TAKE GUN 1 SE"), or the door
-// within `Rules::doorReach` of its slab ("E · OPEN" while it shuts, "E ·
-// CLOSE" while it opens, on either side since C4); with both in reach the
-// door wins when the look is on the doorway or the pilot is nearer the door
-// than the station. The pawn sends the MMORPG client's
-// Door and Man requests on it; the cockpit shows its prompt; `PoseCitadel`
-// lights the door panel on the pilot's side while it is in reach.
+// `AcCitadelAct`: the Citadel's side of the act key (C1,
+// docs/citadel-interior.md §7): the guns' names, the gun a pilot mans and
+// its look held in the gun's arc, the gun's eye, the door panel lit for the
+// pose. What E does at a Citadel (the door from its panels or the door
+// itself, a gun from its console) is `AcActPick`'s (C5, docs/acting.md);
+// the pawn lights the panel on the pilot's side while E is on the door
+// (`SetPanel`), `PoseCitadel` reads it.
 //
 // Plain C++ over `ac::Simulation` (no world).
 #pragma once
@@ -23,37 +20,6 @@ namespace AcCitadelAct
 	AUTOCRAFT_API const TCHAR* Compass(int32 Gun);
 	/// "TURRET 1 · SE" style: the gun's number (1 to 4) and its compass.
 	AUTOCRAFT_API FString GunName(int32 Gun);
-
-	struct FAct
-	{
-		enum class EKind : uint8
-		{
-			Man,
-			Door
-		};
-		EKind Kind = EKind::Door;
-		int64 Citadel = 0;
-		/// Man: the gun (0 to 3).
-		int32 Gun = INDEX_NONE;
-		/// Door: open (else close).
-		bool bOpen = true;
-		/// The pilot stands in the hall (the inner door panel's side).
-		bool bInside = false;
-		/// Why the key would be refused now (someone in the doorway): the
-		/// prompt says it and the key sends nothing.
-		TOptional<FString> Why;
-
-		/// "E · TAKE GUN 1 SE", "E · OPEN", "E · CLOSE", or `Why`.
-		AUTOCRAFT_API FString Prompt() const;
-	};
-
-	/// The act at a Citadel for unit `U`, or unset (also while it mans a
-	/// gun). The caller checks first that nothing else takes the key.
-	AUTOCRAFT_API TOptional<FAct> Find(const ac::Simulation& Sim, const ac::Unit& U);
-	/// The look `Look` (world radians) from `Local` (in the Citadel's frame)
-	/// meets the doorway or the door panels beside it within reach, seen
-	/// from above.
-	AUTOCRAFT_API bool AimedAtDoorway(const ac::Footprint& F, ac::Vec2 Local, double Look);
 
 	/// The gun `U` mans: its Citadel's id and the gun; unset: none.
 	AUTOCRAFT_API TOptional<TPair<int64, int32>> Manned(const ac::Simulation& Sim, const ac::Unit& U);

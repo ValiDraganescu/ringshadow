@@ -4,7 +4,7 @@
 // Citadel's pose (the ramp, the stations, the hall lamps, the door panels,
 // the turrets). Run headless:
 //   UnrealEditor Autocraft.uproject -nullrhi -unattended -nosplash -nosound
-//     -ExecCmds="Automation RunTests Autocraft.Pilot.GunLookClamps+Autocraft.Pilot.CitadelDoorPrompt+Autocraft.Hud.TurretFeedPaints+Autocraft.Pose.CitadelRamp+Autocraft.Pose.CitadelTurretsShown; Quit"
+//     -ExecCmds="Automation RunTests Autocraft.Pilot.GunLookClamps+Autocraft.Hud.TurretFeedPaints+Autocraft.Pose.CitadelRamp+Autocraft.Pose.CitadelTurretsShown; Quit"
 //     -TestExit="Automation Test Queue Empty"
 #include "AcCitadelAct.h"
 #include "AcModelCatalog.h"
@@ -156,71 +156,6 @@ bool FAcPilotGunLookTest::RunTest(const FString&)
 	TestTrue(TEXT("the eye over the deck"), Eye.Equals(FVector(E.x * 100, E.y * 100, (2.0 + E.z) * 100), 0.01));
 	TestTrue(TEXT("the eye up on the roof"), E.z > ac::Defence::deckHeight);
 	AcSpace::SetOrigin(Was);
-	return true;
-}
-
-// C4: the act key's door prompt on both sides of the gate: "E · CLOSE"
-// while it opens and "E · OPEN" while it shuts, outside and inside, from the
-// foot of the ramp to the hall's front third; the door over a gun station
-// when the look is on the doorway or the door is nearer.
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAcCitadelDoorPromptTest, "Autocraft.Pilot.CitadelDoorPrompt", Flags)
-bool FAcCitadelDoorPromptTest::RunTest(const FString&)
-{
-	const FHallOn Hall;
-	ac::GameState G;
-	G.players = {ac::Player{}, ac::Player{}};
-	G.score = {0, 0};
-	G.nextID = 10;
-	G.structures.push_back(Citadel());
-	ac::Simulation Sim(G, std::nullopt);
-	ac::Structure& S = Sim.state.structures.front();
-	const ac::Vec2 At = S.position;
-	// Looking at the door (+y) from outside means facing -y; from inside, +y.
-	auto PromptAt = [&](const ac::Vec2 Local, const double Heading) -> FString
-	{
-		const ac::Unit U(9, ac::UnitKind::prospector, 0, At + Local, Heading, ac::Unit::Task::idle);
-		const TOptional<AcCitadelAct::FAct> A = AcCitadelAct::Find(Sim, U);
-		return A ? A->Prompt() : FString(TEXT("(none)"));
-	};
-	const double In = 0.5 * Pi, Out = -0.5 * Pi;
-	const ac::Vec2 Outside[] = {ac::Vec2(0, 7.2), ac::Vec2(0, 8.9), ac::Vec2(-2.5, 7)};
-	const ac::Vec2 Inside[] = {ac::Vec2(0, 3.8), ac::Vec2(0, 2.2), ac::Vec2(1.0, 3.2)};
-	// Shut: OPEN on both sides.
-	for (const ac::Vec2 L : Outside) TestEqual(*FString::Printf(TEXT("shut, outside at (%.1f, %.1f)"), L.x, L.y), PromptAt(L, Out), FString(TEXT("E · OPEN")));
-	for (const ac::Vec2 L : Inside) TestEqual(*FString::Printf(TEXT("shut, inside at (%.1f, %.1f)"), L.x, L.y), PromptAt(L, In), FString(TEXT("E · OPEN")));
-	// Open (and opening): CLOSE on both sides.
-	S.door = ac::Door{1.0, true};
-	for (const ac::Vec2 L : Outside) TestEqual(*FString::Printf(TEXT("open, outside at (%.1f, %.1f)"), L.x, L.y), PromptAt(L, Out), FString(TEXT("E · CLOSE")));
-	for (const ac::Vec2 L : Inside) TestEqual(*FString::Printf(TEXT("open, inside at (%.1f, %.1f)"), L.x, L.y), PromptAt(L, In), FString(TEXT("E · CLOSE")));
-	// Facing away inside still closes it (nothing else in reach).
-	TestEqual(TEXT("open, inside facing the hall"), PromptAt(ac::Vec2(0, 3.8), Out), FString(TEXT("E · CLOSE")));
-	// Half way down it closes again; shutting, it opens again.
-	S.door = ac::Door{0.5, true};
-	TestEqual(TEXT("opening half way, outside"), PromptAt(ac::Vec2(0, 7.2), Out), FString(TEXT("E · CLOSE")));
-	S.door = ac::Door{0.5, false};
-	TestEqual(TEXT("shutting half way, outside"), PromptAt(ac::Vec2(0, 7.2), Out), FString(TEXT("E · OPEN")));
-	S.door = ac::Door{1.0, true};
-	// Far: nothing.
-	TestEqual(TEXT("far out on the apron"), PromptAt(ac::Vec2(0, 9.5), Out), FString(TEXT("(none)")));
-	TestEqual(TEXT("deep in the hall"), PromptAt(ac::Vec2(0, -1), In), FString(TEXT("(none)")));
-	// Someone in the doorway: the reason, outside and inside.
-	Sim.state.units.push_back(ac::Unit(11, ac::UnitKind::prospector, 0, At + ac::Vec2(0.5, 5.5), 0, ac::Unit::Task::idle));
-	Sim.reindex();
-	TestEqual(TEXT("someone in the doorway, outside"), PromptAt(ac::Vec2(0, 7.5), Out), FString(TEXT("Someone is in the doorway")));
-	TestEqual(TEXT("someone in the doorway, inside"), PromptAt(ac::Vec2(0, 3.0), In), FString(TEXT("Someone is in the doorway")));
-	Sim.state.units.clear();
-	Sim.reindex();
-	// Gun 2 SW's station (-4, 4) and the door both in reach at (-2.7, 3.9):
-	// the station is nearer, so its prompt; looking at the doorway, the door.
-	const ac::Vec2 Corner(-2.7, 3.9);
-	TestEqual(TEXT("by the SW station, looking into the hall"), PromptAt(Corner, Out), FString(TEXT("E · TAKE GUN 2 SW")));
-	TestEqual(TEXT("by the SW station, looking at the door"), PromptAt(Corner, std::atan2(5.5 - 3.9, 0 - -2.7)), FString(TEXT("E · CLOSE")));
-	// Both in reach at (-2.7, 4.6), the door nearer (1.26 against 1.43): the
-	// door, whatever the look.
-	TestEqual(TEXT("nearer the door"), PromptAt(ac::Vec2(-2.7, 4.6), Out), FString(TEXT("E · CLOSE")));
-	// The look on the panel beside the jamb counts.
-	TestTrue(TEXT("the inner panel beside the jamb"), AcCitadelAct::AimedAtDoorway(ac::Rules::footprint(S.kind), ac::Vec2(-2.25, 2.5), In));
-	TestFalse(TEXT("the side wall"), AcCitadelAct::AimedAtDoorway(ac::Rules::footprint(S.kind), Corner, Pi));
 	return true;
 }
 

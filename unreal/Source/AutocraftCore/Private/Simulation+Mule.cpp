@@ -4,6 +4,7 @@
 
 #include "Simulation.h"
 
+#include "Act.h"
 #include "Mule.h"
 
 #include <cmath>
@@ -34,7 +35,7 @@ std::optional<std::string> Simulation::muleBoardRefusal(const Unit& u, const Uni
     if (u.kind != UnitKind::prospector || !(u.hp > 0) || u.owner != m.owner) return "Only a Prospector drives the Mule";
     if (u.task == Unit::Task::aboard || u.task == Unit::Task::atGun || u.task == Unit::Task::inDerrick) return "On foot first";
     if (m.cargo && !m.cargo->empty()) return "Someone drives it already";
-    if (distance(u.position, Mule::perch(m)) > Mule::reach) return "Get to the Mule's perch";
+    if (Act::gap(u, Act::perch(m)) > Act::serverReach) return "Get to the Mule's perch";
     return std::nullopt;
 }
 
@@ -106,7 +107,7 @@ std::optional<std::string> Simulation::muleFillRefusal(const Unit& u, const Unit
     if (u.task == Unit::Task::aboard) return "Climb off the Mule first";
     if (u.kind != UnitKind::prospector || u.owner != m.owner) return "Only a Prospector fills the Mule";
     if (!(u.carrying > 0)) return "Nothing to put in";
-    if (distance(u.position, Mule::hopper(m)) > Mule::reach) return "Get to the Mule's hopper";
+    if (Act::gap(u, Act::hopper(m)) > Act::serverReach) return "Get to the Mule's hopper";
     if (Mule::room(m) <= 0) return std::string(Mule::full);
     return std::nullopt;
 }

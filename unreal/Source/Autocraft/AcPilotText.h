@@ -14,6 +14,7 @@
 // menu, the view). Kind-neutral: every kind fills the same struct.
 #pragma once
 
+#include "AcActPick.h"
 #include "CoreMinimal.h"
 
 #include "AcBuildWheel.h"
@@ -236,6 +237,9 @@ struct FAcPilotInputs
 	/// The MMORPG mode's client: the blueprints the pilot has, its level
 	/// (`AcProgressHud::BlueprintRefusal`).
 	const class FAcMmoClient* Mmo = nullptr;
+	/// C5: what E does now (the pawn's `CurrentAct`): its prompt before the
+	/// click's (the demolish hold has its own line).
+	TOptional<AcActPick::FAct> Act;
 };
 
 struct AUTOCRAFT_API AcPilotText

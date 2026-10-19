@@ -1,7 +1,5 @@
 #include "AcPilotOverlay.h"
 
-#include "AcCitadelAct.h"
-#include "AcDemolish.h"
 
 #include "AcMissions.h"
 
@@ -351,21 +349,18 @@ void UAcPilotOverlaySubsystem::OnFrame(const FAcFrame& Frame)
 	Inputs.bThirdPerson = Pawn->Eye().bThirdPerson && Pawn->AtGun() == INDEX_NONE;
 	Inputs.bMmo = Sim->IsMmo();
 	Inputs.Mmo = Sim->MmoClient();
+	Inputs.Act = Pawn->CurrentAct();
 	FAcPilotInfo Info = AcPilotText::Info(S, *F, Inputs);
 	GunFeed(S, *Pawn, Frame, Info);
 	Info.Wheel = Wheel;
 	DummyTags(S, Info);
-	// C3: the demolish prompt and ring, where the Citadel's own E act
-	// (door, gun station) does not take the key.
-	if (const int64 Down = Pawn->DemolishTarget(); Down != INDEX_NONE && !AcCitadelAct::Find(S, U))
+	// C3: the demolish prompt and ring, when E is on a building of the
+	// realm in reach with no act's box under the crosshair (C5, AcActPick.h).
+	if (const TOptional<AcActPick::FAct>& Down = Inputs.Act; Down && Down->Kind == AcActPick::EKind::Demolish)
 	{
-		if (const std::optional<ac::Structure> B = S.state.structure(Down))
-		{
-			const std::optional<std::string> Why = S.demolishRefusal(*B);
-			Info.Demolish = Why ? UTF8_TO_TCHAR(Why->c_str()) : AcDemolish::Prompt(B->kind);
-			Info.bDemolishBlocked = Why.has_value();
-			Info.DemolishFill = Pawn->DemolishFill();
-		}
+		Info.Demolish = Down->Prompt();
+		Info.bDemolishBlocked = Down->Why.IsSet();
+		Info.DemolishFill = Pawn->DemolishFill();
 	}
 	if (Inputs.Mmo)
 	{

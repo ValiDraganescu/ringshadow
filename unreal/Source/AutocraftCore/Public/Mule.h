@@ -24,9 +24,6 @@ struct AUTOCRAFTCORE_API Mule {
     /// What it holds, ore and MH together, one a unit. The load that fills
     /// it may go over; at or over this no new load goes in.
     static constexpr int64_t capacity = 1000;
-    /// How far from the perch a Prospector climbs on (and from the hopper
-    /// puts its load in), cells from its centre to the point.
-    static constexpr double reach = 2.0;
     /// Its body: long along its heading, wide, its top (the hopper's rim and
     /// the tanks) over the ground; the perch's deck its driver stands on. It
     /// fits the Citadel's doorway (3 wide, 3 tall) and the Dropship's bay

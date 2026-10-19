@@ -7,6 +7,7 @@
 
 #include "WorldMap.h"
 
+#include "Act.h"
 #include "Mule.h"
 
 #include <cmath>
@@ -49,6 +50,10 @@ std::optional<std::string> WorldMap::buyMule(PilotId pilot, int64_t foundry) {
     const Simulation& sim = regions_[p->region]->simulation();
     const auto b = sim.state.structure(foundry);
     if (!b || b->kind != StructureKind::foundry || !b->complete() || !realm(*b)) return "Buy the Mule at a finished Foundry";
+    // At its call post (C5, Act.h): the pilot's unit within reach of it.
+    const auto d = regions_[p->region]->driving(pilot);
+    const auto u = d ? sim.state.unit(*d) : std::nullopt;
+    if (!u || Act::gap(*u, Act::foundryPost(*b)) > Act::serverReach) return "Too far from the Foundry's post";
     bankOut(*p, p->region);
     if (p->wallet.ore < Mule::ore()) return "Not enough ore: you have " + std::to_string(p->wallet.ore);
     if (p->wallet.hydrogen < Mule::hydrogen()) return "Not enough MH: you have " + std::to_string(p->wallet.hydrogen);
@@ -180,7 +185,8 @@ std::string WorldMap::devMule(const std::string& line) {
     GameState& st = sim.state;
     const auto me = p.unit ? sim.unitIndex(*p.unit) : std::nullopt;
     if (what == "foundry") {
-        // A complete Foundry ahead, its door (+y) toward the pilot.
+        // A complete Foundry ahead, its door (+y) toward the pilot, the
+        // pilot by its call post (C5, Act.h), clear of the Mule's way out.
         if (!me) return "dev: mule foundry: the pilot has no Prospector here";
         const Vec2 at = st.units[size_t(*me)].position;
         const double heading = st.units[size_t(*me)].heading;
@@ -189,7 +195,7 @@ std::string WorldMap::devMule(const std::string& line) {
             for (const double turn : {0.0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2}) {
                 const auto spot = sim.snap(StructureKind::foundry, at + Vec2(std::cos(heading + turn), std::sin(heading + turn)) * d);
                 if (!spot || sim.placementRefusal(StructureKind::foundry, *spot)) continue;
-                const Vec2 stand = Mule::door(*spot) + Vec2(0, Mule::length / 2 + 3);
+                const Vec2 stand = *spot + Act::foundryPostAt(half) + Vec2(0.6, 1.0);
                 if (!sim.nav || !sim.nav->walkable(stand) || sim.nav->inRock(stand) || !sim.nav->walkable(Mule::door(*spot))) continue;
                 Structure f(st.nextID++, StructureKind::foundry, Pilot::player, *spot);
                 f.hp = Rules::hp(StructureKind::foundry);

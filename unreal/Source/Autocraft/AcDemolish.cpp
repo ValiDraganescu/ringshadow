@@ -4,14 +4,6 @@
 
 #include "Rules.h"
 
-TOptional<int64> AcDemolish::Target(const ac::Simulation& Sim, const ac::Unit& U, const int64 Crosshair)
-{
-	if (Crosshair == INDEX_NONE) return {};
-	const std::optional<ac::Structure> S = Sim.state.structure(Crosshair);
-	if (!S || S->owner != ac::Pilot::player || !Sim.demolishReach(U, *S)) return {};
-	return Crosshair;
-}
-
 FString AcDemolish::Prompt(const ac::StructureKind Kind, const TCHAR* Key)
 {
 	const ac::Price Back = ac::Simulation::salvage(Kind, true);

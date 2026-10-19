@@ -1,6 +1,7 @@
 // The Mule (C4, docs/haul-and-ferry.md section 2, `Mule.h`): the hauler the
 // pilot drives; filled at its hopper, it books its load in a Citadel's hall.
 // Hand-built scenes of a few seconds round the Citadel's hall (HallScene.h).
+#include "Act.h"
 #include "HallScene.h"
 #include "Mule.h"
 #include "SimHelpers.h"
@@ -84,7 +85,7 @@ TEST(mule_fillTakesTheWholeLoad) {
     EXPECT_TRUE(!unitOf(h.sim, h.pilot).hydrogen);
     // Out of reach of the hopper.
     unitOf(h.sim, h.pilot).carrying = 5;
-    unitOf(h.sim, h.pilot).position = Mule::hopper(unitOf(h.sim, mule)) + Vec2(Mule::reach + 0.1, 0);
+    unitOf(h.sim, h.pilot).position = Mule::hopper(unitOf(h.sim, mule)) + Vec2(Act::serverReach + 1.6, 0);
     EXPECT_TRUE(h.sim.muleFill(h.pilot, mule).value_or("") == "Get to the Mule's hopper");
     EXPECT_EQ(unitOf(h.sim, mule).haul->total(), int64_t(45));
     // A Prospector of another side.
@@ -123,7 +124,7 @@ TEST(mule_boardRideAndLeave) {
     const CitadelHall on(true);
     Hall h = hallScene(kAt + Vec2(0, 14));
     const int64_t mule = addMule(h.sim, kAt + Vec2(0, 18), 0);
-    unitOf(h.sim, h.pilot).position = Mule::perch(unitOf(h.sim, mule)) + Vec2(Mule::reach + 0.1, 0);
+    unitOf(h.sim, h.pilot).position = Mule::perch(unitOf(h.sim, mule)) + Vec2(Act::serverReach + 1.5, 0);
     EXPECT_TRUE(h.sim.muleBoard(h.pilot, mule).value_or("") == "Get to the Mule's perch");
     board(h, mule);
     EXPECT_TRUE(h.sim.muleRider(mule) == h.pilot);
@@ -148,7 +149,7 @@ TEST(mule_boardRideAndLeave) {
     EXPECT_TRUE(h.sim.take(h.pilot));
     const Unit& off = unitOf(h.sim, h.pilot);
     EXPECT_TRUE(off.task == Unit::Task::idle && !h.sim.muleRider(mule));
-    EXPECT_TRUE(distance(off.position, Mule::perch(unitOf(h.sim, mule))) < Mule::reach);
+    EXPECT_TRUE(Act::gap(off, Act::perch(unitOf(h.sim, mule))) <= Act::reach);
     EXPECT_TRUE(distance(off.position, unitOf(h.sim, mule).position) > Rules::radius(UnitKind::mule));
     // Left alone, it stands where it is.
     const Vec2 parked = unitOf(h.sim, mule).position;
@@ -253,7 +254,7 @@ TEST(mule_destroyedDropsItsRider) {
     EXPECT_TRUE(!h.sim.state.unit(mule));
     const Unit& p = unitOf(h.sim, h.pilot);
     EXPECT_TRUE(p.task == Unit::Task::idle && p.hp > 0);
-    EXPECT_TRUE(distance(p.position, kAt + Vec2(0, 18)) < Mule::reach + 1);
+    EXPECT_TRUE(distance(p.position, kAt + Vec2(0, 18)) < 3.0);
     bool died = false;
     for (const GameEvent& e : events)
         if (const auto* d = e.as<GameEvent::Died>(); d && d->unit == mule) died = true;

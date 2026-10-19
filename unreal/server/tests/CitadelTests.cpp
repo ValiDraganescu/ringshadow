@@ -193,8 +193,9 @@ TEST(door_opensAndClosesFromEitherSide) {
     ASSERT_TRUE(!w.door(a, false).has_value());
     settle();
     EXPECT_EQ(c->door->open, 0.0);
-    // From the foot of the ramp (3 out from the slab) too.
-    standAt(w, a, h.centre + Vec2(0, 6 + 2.9));
+    // From 2.3 out from the slab too (C5: the body's edge within
+    // `Act::serverReach` of the door).
+    standAt(w, a, h.centre + Vec2(0, 6 + 2.3));
     ASSERT_TRUE(!w.door(a, true).has_value());
     settle();
     EXPECT_TRUE(Simulation::doorOpen(*c));

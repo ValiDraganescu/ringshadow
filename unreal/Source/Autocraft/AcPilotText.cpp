@@ -3,7 +3,6 @@
 #include "AcCitadelAct.h"
 #include "AcMuleAct.h"
 #include "Mule.h"
-#include "AcShuttleAct.h"
 #include "AcKindTable.h"
 #include "AcProgressHud.h"
 #include "Defence.h"
@@ -434,37 +433,18 @@ FAcPilotInfo AcPilotText::Info(const ac::Simulation& Sim, const FAcPilotFrame& F
 	else
 	{
 		const std::optional<ac::PilotTarget>& Target = F.Target;
-		// C1: nothing else to act on: a gun station or the Citadel's door.
-		const TOptional<AcCitadelAct::FAct> AtCitadel = !Target && In.bMmo ? AcCitadelAct::Find(Sim, U) : TOptional<AcCitadelAct::FAct>();
-		// C4, before the Citadel's: the Mule's perch and hopper, the Foundry's Mule.
-		const TOptional<AcMuleAct::FAct> AtMule = !Target && In.bMmo ? AcMuleAct::Find(Sim, U, MuleOwn) : TOptional<AcMuleAct::FAct>();
-		// C4: the walk-in Dropship's buttons, or a call from a Landing Pad.
-		const TOptional<AcShuttleAct::FAct> AtShip = !Target && In.bMmo ? AcShuttleAct::Find(Sim, U) : TOptional<AcShuttleAct::FAct>();
+		// C5: E's act, the thing under the crosshair in reach (AcActPick.h);
+		// the demolish hold has its own line.
+		const TOptional<AcActPick::FAct>& Act = In.Act && In.Act->Kind != AcActPick::EKind::Demolish ? In.Act : TOptional<AcActPick::FAct>();
 		if (U.task == ETask::atGun)
 		{
 			Info.Prompt = FString(TEXT("Click  fire   ·   Esc  disengage"));
 			Info.Tone = F.Sight && F.Sight->inRange ? EAcTone::Enemy : EAcTone::Ready;
 		}
-		else if (AtShip)
+		else if (Act)
 		{
-			Info.Prompt = AtShip->Prompt();
-			Info.Tone = AtShip->Why ? EAcTone::Blocked : EAcTone::Ready;
-		}
-		// Driving a Mule: the door with the crosshair on it before climbing off.
-		else if (AtCitadel && U.kind == ac::UnitKind::mule)
-		{
-			Info.Prompt = AtCitadel->Prompt();
-			Info.Tone = AtCitadel->Why ? EAcTone::Blocked : EAcTone::Ready;
-		}
-		else if (AtMule)
-		{
-			Info.Prompt = AtMule->Prompt();
-			Info.Tone = AtMule->Why ? EAcTone::Blocked : EAcTone::Ready;
-		}
-		else if (AtCitadel)
-		{
-			Info.Prompt = AtCitadel->Prompt();
-			Info.Tone = AtCitadel->Why ? EAcTone::Blocked : EAcTone::Ready;
+			Info.Prompt = Act->Prompt();
+			Info.Tone = Act->Why ? EAcTone::Blocked : EAcTone::Ready;
 		}
 		else if (!Target)
 		{
