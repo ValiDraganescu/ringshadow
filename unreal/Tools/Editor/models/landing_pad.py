@@ -44,7 +44,7 @@ def d(what, channels=("emission",)):
 SIDE = 1100         # C5: 11 cells (Rules::radius(landingPad) 5.5 in the MMO with today's Dropship)
 HALF = SIDE / 2
 PLATE = SIDE - 16   # the plate inset 8 cm all round
-m.mesh(m.root, "hullDark", [box((SIDE, SIDE, 8), base=True)])
+m.mesh(m.root, "hullDark", [box((SIDE, SIDE, 10), at=(0, 0, -2), base=True)])  # 2 under the ground (the call post stands on 0)
 m.mesh(m.root, "hullMid", [box((PLATE, PLATE, 10), at=(0, 0, 8), base=True)])
 # deck plates: a grid of seams about a cell apart (those along x cut at those along y: crossing seams share their tops)
 SEAMS = tuple(range(-400, 401, 100))

@@ -5,6 +5,8 @@
 
 #include "WorldMap.h"
 
+#include "Mule.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -40,13 +42,13 @@ std::string WorldMap::devStreet(const std::string& line) {
     const auto me = p.unit ? sim.unitIndex(*p.unit) : std::nullopt;
     if (!me) return "dev: street: the pilot has no Prospector here";
 
-    // The ones an earlier line set out go first.
-    for (const int64_t id : devStreet_) {
+    // The ones an earlier line set out go first (not for `street door`).
+    for (const int64_t id : what == "door" ? std::vector<int64_t>{} : devStreet_) {
         builtBy_[r].erase(id);
         st.structures.erase(std::remove_if(st.structures.begin(), st.structures.end(), [&](const Structure& s) { return s.id == id; }),
                             st.structures.end());
     }
-    devStreet_.clear();
+    if (what != "door") devStreet_.clear();
     sim.reindex();
     sim.refreshNav();
 
@@ -170,12 +172,36 @@ std::string WorldMap::devStreet(const std::string& line) {
         return out + where;
     }
 
+    if (what == "door") {
+        // The pilot's Mule at the door of the Foundry an earlier line set
+        // out, facing out of it, as one rolls out (its door opens).
+        const Structure* f = nullptr;
+        for (const Structure& b : st.structures)
+            if (b.kind == StructureKind::foundry && std::find(devStreet_.begin(), devStreet_.end(), b.id) != devStreet_.end()) f = &b;
+        if (!f) return "dev: street door: no Foundry set out (street foundry first)";
+        const Vec2 at = Mule::door(f->position);
+        std::optional<int64_t> id = p.mule && p.mule->region == r ? p.mule->unit : std::nullopt;
+        if (!id || !sim.unitIndex(*id)) {
+            id = sim.rollOutAt(at, Pilot::player);
+            PilotState::OwnMule own;
+            own.region = r;
+            own.unit = *id;
+            p.mule = own;
+        }
+        if (const auto i = sim.unitIndex(*id)) {
+            st.units[size_t(*i)].position = at;
+            st.units[size_t(*i)].heading = Mule::doorHeading;
+        }
+        sim.reindex();
+        return "dev: street door: mule " + std::to_string(*id);
+    }
+
     // One kind: ahead of the pilot on clear ground (a Derrick on the
     // nearest free well), the Prospector at its front corner, facing out.
     std::optional<StructureKind> kind;
     for (const auto& [name, k] : streetKinds())
         if (name == what) kind = k;
-    if (!kind) return "dev: street: '" + what + "' is not all|habdome|garrison|bastion|foundry|spacedock|lab|sentinel|gatling|pad|derrick";
+    if (!kind) return "dev: street: '" + what + "' is not all|door|habdome|garrison|bastion|foundry|spacedock|lab|sentinel|gatling|pad|derrick";
     const Vec2 at = st.units[size_t(*me)].position;
     const double heading = st.units[size_t(*me)].heading;
     const double kr = Rules::radius(*kind);

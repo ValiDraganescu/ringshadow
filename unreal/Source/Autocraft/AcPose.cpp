@@ -121,7 +121,8 @@ namespace AcPose
 		case ac::StructureKind::garrison: H = 2.5; break;
 		case ac::StructureKind::bastion: H = 1.4; break;
 		case ac::StructureKind::derrick: H = 2.5; break;
-		case ac::StructureKind::foundry: H = 2.4; break;
+		// foundry.py: made at the MMO's 7x7 (C5).
+		case ac::StructureKind::foundry: R = 3.5; H = 5.76; break;
 		case ac::StructureKind::spacedock: H = 3.2; break;
 		case ac::StructureKind::lab: R = 1.0; H = 1.9; break;
 		case ac::StructureKind::sentinel: R = 1.0; H = 1.7; break;

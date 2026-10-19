@@ -49,18 +49,19 @@ namespace
 		Emit(C, P, Steam, SteamAt.Get(M), !bLive ? 0.0 : bWorking ? 6.0 : 0.8);
 
 		// Assembly: the trolley shuttles between weld stations; at each one
-		// the arm dips and welds in bursts.
+		// the arm dips and welds in bursts (foundry.py, C5: the gantry over
+		// the 7-cell roof, cells of the model).
 		const double Station = std::floor(Ph / 2.2);
 		const double Within = Ph - Station * 2.2;
 		const double Id = double(S.id);
-		const double Target = bWorking ? 0.42 * std::sin(Station * 2.39996 + Id) : 0.0;
-		const double Prev = bWorking ? 0.42 * std::sin((Station - 1.0) * 2.39996 + Id) : 0.0;
+		const double Target = bWorking ? 0.95 * std::sin(Station * 2.39996 + Id) : 0.0;
+		const double Prev = bWorking ? 0.95 * std::sin((Station - 1.0) * 2.39996 + Id) : 0.0;
 		const double Move = Smoothstep(0, 0.6, Within);
 		const FVector& TR = Rest(M, Trolley.Get(M));
-		SetPosition(P, Trolley.Get(M), 0.18 + Prev + (Target - Prev) * Move, TR.Y, TR.Z);
+		SetPosition(P, Trolley.Get(M), 0.45 + Prev + (Target - Prev) * Move, TR.Y, TR.Z);
 		const double Dip = bWorking ? Smoothstep(0.6, 0.9, Within) * (1.0 - Smoothstep(1.9, 2.2, Within)) : 0.0;
 		const FVector& AR = Rest(M, Arm.Get(M));
-		SetPosition(P, Arm.Get(M), AR.X, -0.08 * Dip, AR.Z);
+		SetPosition(P, Arm.Get(M), AR.X, -0.25 * Dip, AR.Z);
 		const bool bArcing = bWorking && Dip > 0.9;
 		const double Flicker = 0.5 + 0.5 * std::sin(Ph * 47.0) * std::sin(Ph * 23.0 + 1.3);
 		Emit(C, P, Sparks, SparksAt.Get(M), bArcing ? 70.0 : 0.0);
@@ -77,15 +78,17 @@ namespace
 			static const std::vector<ac::UnitKind> Trains = ac::Rules::trains(ac::StructureKind::foundry);
 			for (const ac::Unit& U : C.State.units)
 			{
+				// C4/C5: a Mule bought here rolls out of the door too.
 				if (U.owner == S.owner && ac::distance(U.position, Door) < 1.3
-					&& std::find(Trains.begin(), Trains.end(), U.kind) != Trains.end())
+					&& (U.kind == ac::UnitKind::mule || std::find(Trains.begin(), Trains.end(), U.kind) != Trains.end()))
 				{
 					bLeaving = true;
 					break;
 				}
 			}
 		}
-		constexpr double Travel = 0.64;  // Models.Foundry.doorTravel
+		// foundry.py: each leaf 1.5 cells wide, slid 1.5 into its pod.
+		constexpr double Travel = 1.5, LeafHalf = 0.75;
 		FDoorState& Mem = C.Memory.State<FDoorState>();
 		const double Want = bLive && (bLeaving || Progress01.value_or(0.0) > 0.94) ? Travel : 0.0;
 		const double Now = FMath::Clamp(Ease(Mem.Value.Get(0.0), Want, 0.05, C.Dt), 0.0, Travel);
@@ -94,7 +97,7 @@ namespace
 		for (int32 K = 0; K < Leaves.Num(M); ++K)
 		{
 			const FVector& LR = Rest(M, Leaves(M, K));
-			SetPosition(P, Leaves(M, K), (K == 0 ? -1.0 : 1.0) * (0.31 + Open * Travel), LR.Y, LR.Z);
+			SetPosition(P, Leaves(M, K), (K == 0 ? -1.0 : 1.0) * (LeafHalf + Open * Travel), LR.Y, LR.Z);
 		}
 		GlowGroup(M, P, BayGlow, 0.1 + 2.0 * Open, 0.1);
 		Light(C, P, DoorLight.Get(M), 30.0 * Open);

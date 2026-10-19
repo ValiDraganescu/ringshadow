@@ -1050,7 +1050,8 @@ public:
     /// Prospector at its front corner; its id. `street all`: a Citadel of the
     /// realm on the nearest open ground that takes it and one of each kind
     /// down both sides of a road 8 cells wide out of its door, a Derrick on
-    /// a well near it, the Prospector at the door; where each went.
+    /// a well near it, the Prospector at the door; where each went. `street
+    /// door`: the pilot's Mule at the door of the Foundry set out, facing out.
     std::string devStreet(const std::string& line);
     /// The share of a kill's XP a defence's builder earns when the defence
     /// hits a bug (docs/creatures.md, "XP and rewards").

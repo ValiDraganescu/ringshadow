@@ -10,7 +10,9 @@
 //             -AcMmoShots=DIR, PNGs from a free camera before its front
 //             corner, framed for the MMO's size (so the same picture taken
 //             at the strategy game's sizes shows how much it grew): DIR/
-//             citadel.png, foundry.png, habdome.png, garrison.png,
+//             citadel.png, foundry.png, foundry-door.png (`street door`:
+//             the pilot's Mule at its door facing out, the door open),
+//             habdome.png, garrison.png,
 //             bastion.png, spacedock.png, lab.png, sentinel.png,
 //             gatling.png, pad.png, derrick.png; and for `street all` (a
 //             Citadel on open ground near the start pad and one of each
@@ -31,6 +33,7 @@
 #include "AcTerrain.h"
 #include "AcWorldRenderer.h"
 
+#include "Mule.h"
 #include "Rules.h"
 #include "Simulation.h"
 
@@ -218,7 +221,9 @@ void UAcGameFlowSubsystem::TickMmoSizeShots(const FString& Step)
 	// first so its search for open ground starts from the start pad; each
 	// `street` line takes the last one's away.
 	const int32 At = Staged.Kind;
-	const int32 KindAt = At >= 2 && At - 2 < NumKinds ? At - 2 : INDEX_NONE;
+	// (At 4, after the Foundry: its door open, the Mule rolling out.)
+	constexpr int32 DoorAt = 4;
+	const int32 KindAt = At == 2 || At == 3 ? At - 2 : At > DoorAt && At - 3 < NumKinds ? At - 3 : INDEX_NONE;
 	if (KindAt != INDEX_NONE)
 	{
 		const FSizeKind& K = Kinds[KindAt];
@@ -305,6 +310,39 @@ void UAcGameFlowSubsystem::TickMmoSizeShots(const FString& Step)
 			Staged.Kind += 1;
 			Staged.ShotAt = -1;
 			Staged.bShot = false;
+		}
+		return;
+	}
+
+	// The Foundry's door open, the pilot's Mule in it facing out (`street
+	// door`), from before the door.
+	if (At == DoorAt)
+	{
+		if (!Staged.bAsked)
+		{
+			Ask(TEXT("street door"));
+			return;
+		}
+		const TOptional<int64> Own = Mmo->OwnMule();
+		const ac::Unit* Mule = Own ? M->unit(*Own) : nullptr;
+		const ac::Structure* F = nullptr;
+		for (const ac::Structure& B : S->state.structures)
+			if (B.kind == ac::StructureKind::foundry && B.complete()) F = &B;
+		if (!Mule || !F || ac::distance(Mule->position, ac::Mule::door(F->position)) > 0.5)
+		{
+			if (Now - Staged.AskedAt > AskSeconds)
+			{
+				Check(false, TEXT("size: the Mule at the Foundry's door"));
+				NextKind();
+			}
+			return;
+		}
+		const double R = ac::Rules::radius(F->kind);
+		Camera(F->position + ac::Vec2(3.0, R + 11.0), 3.2, F->position + ac::Vec2(0, R), 1.4, 55.f);
+		if (Shot(TEXT("foundry-door")))
+		{
+			Check(true, TEXT("size: the Foundry's door open on the Mule"));
+			NextKind();
 		}
 		return;
 	}

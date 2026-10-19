@@ -300,7 +300,8 @@ const UAcLampPool::FSockets& UAcLampPool::SocketsOf(const FAcModelInfo& M)
 			// C1: on the lintel over the 12-cell Citadel's doorway.
 			{TEXT("citadel"), 0, 4.0, 6.1, 8, TEXT("floodGlow"), 2.0},
 			{TEXT("garrison"), 0, 1.5, 2.1, 3.4, TEXT("floodGlow"), 2.0},
-			{TEXT("foundry"), 0, 1.4, 2.2, 3.4, TEXT("floodGlow"), 2.0},
+			// C5: over the 7-cell Foundry's door (foundry.py).
+			{TEXT("foundry"), 0, 3.3, 4.4, 5.6, TEXT("floodGlow"), 2.0},
 			{TEXT("derrick"), 0, 1.6, 2.1, 3.2, TEXT("floodGlow"), 2.0},
 			{TEXT("bastion"), 0, 1.3, 1.9, 3, TEXT("slitGlow"), 1.8},
 			{TEXT("sentinel"), 0, 0.55, 1.15, 2.4, TEXT("workGlow"), 2.0},
@@ -343,9 +344,11 @@ void UAcLampPool::Gather(const double Time, const double Dark, TArray<FWant>& Wa
 							 TConstArrayView<FTransform> World) {
 			if (P.bHidden || P.bFrozen || World.Num() == 0) return;  // fogged buildings: no lights
 			const FSockets& S = SocketsOf(M);
-			// A building grown in the MMO (C5, `AcPose::BuildingScale`): its
-			// lamps reach as far over it as at its old size.
-			const double Grown = bUnit ? 1.0 : FMath::Max(1.0, (M.Parts[0].Rest.Inverse() * World[0]).GetScale3D().X);
+			// A building drawn at another size than its model was made
+			// (C5, `AcPose::BuildingScale`: grown in the MMO, a model made
+			// at the MMO's size drawn smaller in the strategy game): its
+			// lamps reach over it as at the size it was made.
+			const double Grown = bUnit ? 1.0 : FMath::Max(0.2, (M.Parts[0].Rest.Inverse() * World[0]).GetScale3D().X);
 			if (Dark > 0.001)
 			{
 				for (const FSocket& L : S.Lamps)
@@ -395,7 +398,7 @@ void UAcLampPool::Gather(const double Time, const double Dark, TArray<FWant>& Wa
 						W.Colour = PoolColour();
 						W.Intensity = I;
 						// A building grown in the MMO (C5) lights its grown apron.
-						W.Reach = S.PoolReach * FMath::Max(1.0, Placement.GetScale3D().X);
+						W.Reach = S.PoolReach * Grown;
 						Want.Add(W);
 						if (CVarStats.GetValueOnGameThread() < 0)
 							UE_LOG(LogAutocraft, Log, TEXT("lamps: pool %lld %s glow %.2f at %s (root %s)"), Id, *M.Base.ToString(), Glow,

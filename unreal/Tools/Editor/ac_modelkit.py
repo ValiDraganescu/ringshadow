@@ -776,7 +776,7 @@ class Model:
         return _catalog_materials(self._doc)
 
     def material(self, name, parent=None, color=None, metallic=0.0, roughness=0.5, emissive=None, team=(),
-                 blend="opaque", opacity=None, double_sided=False, params=None, emissive_texture=None):
+                 blend="opaque", opacity=None, double_sided=False, params=None, emissive_texture=None, key=None):
         """Declare a material. With no `parent` it is a name that already exists in the catalog (hullLight,
         hullMid, hullDark, hazard, team, chrome, glowCold, glowRed, ...), reused as it is. With `parent`
         ('hull' lit, 'emissive' unlit lamp, 'additive') a new instance is made on first write: color is the
@@ -785,7 +785,19 @@ class Model:
         make_brood_materials.py); `params` sets their own parameters ({name: rgb tuple or scalar}). The key is a hash of the description, so the same description is one
         instance in every model. `emissive_texture` (a picture's path from the repo root, with a grey `emissive`: its
         strength) lights the picture instead of a flat colour, clamped at its edges (a screen on a `panel`); the
-        key hashes the picture's bytes, so a new picture is a new instance."""
+        key hashes the picture's bytes, so a new picture is a new instance. `key` (with no parent) picks one of the
+        catalog's instances of a name that has several (`hull`, `bayGlow`: a model re-made from an export keeps the
+        export's own)."""
+        if parent is None and key is not None:
+            if self._doc is None:
+                self._doc = load_catalog()
+            for mdl in self._doc["models"]:
+                for p in mdl["parts"]:
+                    for x in p["meshes"]:
+                        if x["material"] == name and x["materialKey"] == key:
+                            self._materials[name] = Material(name, key, x["materialInstance"], x["blend"], list(x["team"]))
+                            return name
+            raise KeyError("no material %r with key %r in the catalog" % (name, key))
         if parent is None:
             known = self._known()
             if name not in known:
