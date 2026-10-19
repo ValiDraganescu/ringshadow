@@ -463,6 +463,128 @@ def build_lens():
     return mat
 
 
+# M_AcWindshield (C4, docs/haul-and-ferry.md; AcShuttleShip.h): the lens's rain on the walk-in Dropship's
+# windshield. The same water (LENS_HLSL), in the glass's own frame instead of the view's: each pixel's ray is met
+# with the three panes (the centre one and the two side ones, unfolded beside it), and where it meets one before the
+# scene, the pane's point is the glass coordinate `q` (x across from the centre pane's middle, y down from its top,
+# both in pane heights, as the visor's view heights). Two blades in tandem on the centre pane (pivots `Piv.x`, `Piv.y`
+# across, the same sweep); the side panes are never wiped. The blades themselves are the model's (`wipers_k`): the
+# post-process draws their water, not them. The lens's screen offsets go back to the view through the glass
+# coordinate's screen derivatives.
+WINDSHIELD_GLASS = r"""
+float3 dirW = ScenePos - CamPos;
+float sceneDist = length(dirW);
+dirW /= max(sceneDist, 1e-3);
+float H = GlU.w;
+float bestT = 1e9;
+float2 gq = float2(0.0, -1.0);
+{
+    float3 n = normalize(cross(GlU.xyz, GlV.xyz));
+    float dn = dot(dirW, n);
+    float t = abs(dn) > 1e-5 ? dot(GlO.xyz - CamPos, n) / dn : -1.0;
+    float3 h = CamPos + dirW * t - GlO.xyz;
+    float uu = dot(h, GlU.xyz), vv = dot(h, GlV.xyz);
+    if (t > 0.0 && abs(uu) <= GlO.w && vv >= 0.0 && vv <= H) { bestT = t; gq = float2(uu, vv); }
+}
+[unroll] for (int side = 0; side < 2; side++) {
+    float sg = side == 0 ? 1.0 : -1.0;
+    float3 e = side == 0 ? GlR.xyz : GlL.xyz;
+    float3 o = GlO.xyz + GlU.xyz * (sg * GlV.w);
+    float3 n = normalize(cross(e, GlV.xyz));
+    float dn = dot(dirW, n);
+    float t = abs(dn) > 1e-5 ? dot(o - CamPos, n) / dn : -1.0;
+    float3 h = CamPos + dirW * t - o;
+    float aa = dot(h, e), vv = dot(h, GlV.xyz);
+    if (t > 0.0 && t < bestT && aa >= 0.0 && aa <= GlR.w && vv >= 0.0 && vv <= H) { bestT = t; gq = float2(sg * (GlV.w + aa), vv); }
+}
+float2 q = float2(gq.x / H, (H - gq.y) / H);
+// From the glass back to the view: the screen pixels per unit of q.
+float2 qx = ddx(q), qy = ddy(q);
+float det = qx.x * qy.y - qy.x * qx.y;
+float4 Ji = abs(det) > 1e-9 ? float4(qy.y, -qy.x, -qx.y, qx.x) / det : float4(0.0, 0.0, 0.0, 0.0);
+if (gq.y < 0.0 || bestT > sceneDist - 0.5 || Rain + Seed.z <= 0.0) {
+    return SceneTextureLookup(ClampSceneTextureUV(ViewportUVToSceneTextureUV(VUV, 14), 14), 14, true).rgb;
+}
+float aspect = 1.0;
+"""
+
+
+def windshield_hlsl():
+    s = LENS_HLSL
+    wipe2 = """    // The two blades in tandem on the centre pane (|q.x| < Piv.z): whichever crossed the spot last.
+    float3 Wipe2(float4 Piv, float2 q, float4 A, float4 B, float4 S, float4 Arc) {
+        if (abs(q.x) > Piv.z) return float3(1e5, S.z, -1.0);
+        float3 a = Wipe(q - float2(Piv.x, 0.0), A, B, S, Arc);
+        float3 b = Wipe(q - float2(Piv.y, 0.0), A, B, S, Arc);
+        return a.x <= b.x ? a : b;
+    }
+};
+AcGlassFns G;
+"""
+    reps = [
+        ("};\nAcGlassFns G;\n", wipe2),
+        ("float aspect = Size.x / max(Size.y, 1.0);\n// Glass coordinates: x from the view's middle, y down, both in view heights.\nfloat2 q = float2((VUV.x - 0.5) * aspect, VUV.y);\n",
+         WINDSHIELD_GLASS),
+        ("\nfloat2 rel = q - float2(0.0, Arc.x);", "\nfloat2 rel = q - float2(abs(q.x - Piv.x) < abs(q.x - Piv.y) ? Piv.x : Piv.y, Arc.x);"),
+        ("float2 vs = VUV + float2(off.x / aspect, off.y);", "float2 vs = VUV + float2(Ji.x * off.x + Ji.y * off.y, Ji.z * off.x + Ji.w * off.y) / Size.xy;"),
+    ]
+    for a, b in reps:
+        if s.count(a) != 1:
+            raise RuntimeError("windshield: the lens's HLSL changed near %r" % a[:50])
+        s = s.replace(a, b)
+    n = s.count("G.Wipe(")
+    if n != 3:
+        raise RuntimeError("windshield: %d calls of G.Wipe, 3 expected" % n)
+    s = s.replace("G.Wipe(", "G.Wipe2(Piv, ")
+    # The blades are the model's: the water only.
+    cut = s.index("// The blade over the glass")
+    return s[:cut] + "return col;\n"
+
+
+def build_windshield():
+    path = "/Game/Weather/M_AcWindshield"
+    mat, g = RM.new_master(path, unreal.MaterialShadingModel.MSM_UNLIT)
+    mat.set_editor_property("material_domain", unreal.MaterialDomain.MD_POST_PROCESS)
+    mat.set_editor_property("blendable_location", unreal.BlendableLocation.BL_SCENE_COLOR_AFTER_DOF)
+    scene = g.node(unreal.MaterialExpressionSceneTexture)
+    scene.set_editor_property("scene_texture_id", unreal.SceneTextureId.PPI_POST_PROCESS_INPUT0)
+    size = g.node(unreal.MaterialExpressionViewSize)
+    sizes = g.node(unreal.MaterialExpressionAppendVector)
+    g.link(size, "", sizes, "A")
+    g.link(size, "", sizes, "B")
+
+    def vec(name, default):
+        return g.node(unreal.MaterialExpressionVectorParameter, parameter_name=name,
+                      default_value=unreal.LinearColor(*default), group="Ac")
+
+    e = RM.custom(g, "AcWindshield", windshield_hlsl(), [
+        ("VUV", g.node(unreal.MaterialExpressionScreenPosition), "ViewportUV"),
+        ("Size", sizes, ""),
+        ("Rain", g.node(unreal.MaterialExpressionScalarParameter, parameter_name="LensRain", default_value=0.0, group="Ac"), ""),
+        ("A", vec("GlassA", (0, 0, 0, 0)), "RGBA"),
+        ("B", vec("GlassB", (0, 0, 0, 0)), "RGBA"),
+        ("Seed", vec("GlassSeed", (0, 0, 0, 0)), "RGBA"),
+        ("Arc", vec("GlassArc", (0.974, 0.466, -1.3614, 1.0821)), "RGBA"),
+        ("Blade", vec("GlassBlade", (-1.3614, 0, 0.4, 0.005)), "RGBA"),
+        ("Hist", vec("GlassHist", (0, 0, 0, 0)), "RGBA"),
+        ("Air", vec("GlassAir", (0, 0, 1, 0)), "RGBA"),
+        ("Piv", vec("GlassPivots", (-0.224, 0.241, 0.483, 0.0)), "RGBA"),
+        ("GlO", vec("GlassOrigin", (0, 0, 0, 56)), "RGBA"),
+        ("GlU", vec("GlassAcross", (0, 1, 0, 116)), "RGBA"),
+        ("GlV", vec("GlassUp", (0, 0, 1, 62)), "RGBA"),
+        ("GlR", vec("GlassRight", (0, 1, 0, 67)), "RGBA"),
+        ("GlL", vec("GlassLeft", (0, -1, 0, 67)), "RGBA"),
+        ("CamPos", g.node(unreal.MaterialExpressionCameraPositionWS), ""),
+        ("ScenePos", g.node(unreal.MaterialExpressionWorldPosition), ""),
+        ("S", scene, "Color"),
+    ])
+    g.out(e, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    RM.finish(mat, path, [])
+    unreal.EditorAssetLibrary.set_metadata_tag(mat, "AcMadeBy", "Tools/Editor/make_weather_materials.py")
+    unreal.EditorAssetLibrary.save_loaded_asset(mat)
+    return mat
+
+
 def build_bolt():
     mat, g = RM.new_master(BOLT, unreal.MaterialShadingModel.MSM_UNLIT, unreal.BlendMode.BLEND_ADDITIVE)
     mat.set_editor_property("two_sided", True)
@@ -480,9 +602,22 @@ def build_bolt():
     return mat
 
 
-unreal.log(f"make_weather_materials: built {build().get_path_name()}")
-unreal.log(f"make_weather_materials: built {build_bolt().get_path_name()}")
-unreal.log(f"make_weather_materials: built {build_lens().get_path_name()}")
+# AC_WEATHER_ONLY=windshield (or rain, bolt, lens, hulls; comma separated) builds only those.
+ONLY = set(filter(None, os.environ.get("AC_WEATHER_ONLY", "").split(",")))
+
+
+def wanted(what):
+    return not ONLY or what in ONLY
+
+
+if wanted("rain"):
+    unreal.log(f"make_weather_materials: built {build().get_path_name()}")
+if wanted("bolt"):
+    unreal.log(f"make_weather_materials: built {build_bolt().get_path_name()}")
+if wanted("lens"):
+    unreal.log(f"make_weather_materials: built {build_lens().get_path_name()}")
+if wanted("windshield"):
+    unreal.log(f"make_weather_materials: built {build_windshield().get_path_name()}")
 
 
 def build_wet_hulls():
@@ -494,4 +629,5 @@ def build_wet_hulls():
     return MM.build_master(A.M_HULL, "hull", teams, make_resource_materials.make_world_mpc())
 
 
-unreal.log(f"make_weather_materials: built {build_wet_hulls().get_path_name()}")
+if wanted("hulls"):
+    unreal.log(f"make_weather_materials: built {build_wet_hulls().get_path_name()}")
