@@ -24,7 +24,8 @@ Run from the repo root; `T=unreal/server/build/autocraft-region`.
    low ground). For a clean slate add `"drop": ["resources", "doodads"]`.
    Done when one base is chosen and copied to `unreal/server/regions/<id>.json`.
 3. **Say the land, don't draw it.** Shape the ground with `sculpt`
-   (docs/regions.md, "sculpt"): a style for the brief and a few landforms
+   (docs/regions.md, "sculpt"; every form's numbers and the rules:
+   `ringshadow-world-building`'s LANDFORMS.md; a whole world: that skill): a style for the brief and a few landforms
    where the brief wants them (an escarpment along there, a butte here,
    spires, a wash). Write polygons, circles and single rocks only for what
    a landform cannot say (a pad's flat, a canyon zone): hand-drawn shapes

@@ -1,0 +1,57 @@
+# Hiccups
+
+What surprised an agent building a world, and what fixed it. Add a line the
+moment something surprises you: date, region, what happened, the fix.
+
+- 2026-10-18, every region: about 40% of each region was wall or cliff in a
+  ring round the edge (border level 4, 10-14 m), so a pilot was always
+  boxed in. Fix: rims level 1 with a slope, passages wide, rock standing
+  free instead of round the edge.
+- 2026-10-19, Prospect Landing: free-standing rock as hand-written noisy
+  circles and a hand-drawn plateau still read as placed. Fix: landforms
+  drawn by code; hand-written ground only where LANDFORMS.md "Hand-written
+  ground that stays" allows.
+- 2026-10-19, Prospect Landing: a butte 23 cells from the Citadel stopped
+  every gun round of a raid. Fix: the pad's 30-cell field-of-fire rule.
+- 2026-10-19, Prospect Landing: a style butte's talus apron spread past its
+  reach and left no level ground for a Citadel beside the pad. Fix: reach
+  counts the apron's rough edge (radius × 1.75 + 3.5).
+- 2026-10-19, Prospect Landing: a large swell 30 cells off hid one pilot's
+  headlamp sight from another; boulders inside a passage's lane blocked
+  it. Fix: swells keep 26 + reach from a pad, boulders obey lanes.
+- 2026-10-19, the first buttes stood straight out of the flat like drums.
+  Fix: a talus apron (level 1, slope 3.5) under every butte, mesa and spire
+  cluster.
+- 2026-10-19, an escarpment's back ran straight for 30 cells with sharp
+  boomerang tips. Fix: the back wanders ±35% of its depth and its ends
+  round off.
+- 2026-10-19, rust-hollow, ashen-shelf, slag-pockets, dust-terraces, cold-fork:
+  the `badlands`/`highlands`/`ridge` bases drew cliff-ringed plateaus
+  under the landforms. Fix: `openField` base, ground from landforms only.
+- 2026-10-19, Cold Fork: switching its base style moved its canyon's
+  noise-seeded wall shelves; the old gun spot could no longer reach the
+  north arm. Every path point still has 2+ rim spots. Fix: tests pick the
+  gun spot by `rig::rimGunSpot`.
+- 2026-10-19, Cold Fork: a level-1 pad flat (slope 10) on level-0 ground
+  made the pad a mound; no Citadel fit within 19 cells. Fix: pad flats at
+  level 0, slope 5.
+- 2026-10-19, Ashen Shelf: `badlands` ringed the rim with cliff-sided
+  shelves and placed no free rock. Fix: `mesa-country`.
+- 2026-10-19, Dust Terraces: removing its old plateau left The Roost's ramps
+  starting at the wrong level; the prize and the vault were cut off. Fix: a
+  gentle hand-written rise (slope 5) north of the zone.
+- 2026-10-19, Brine Pans, Dust Terraces: the canyon zones' cuts are the 9
+  straight cliff runs each; leave them.
+- 2026-10-19, Start: widened spans reaching a corner left their strips
+  disconnected; "the border's outline closes the passage". Fix: trim the
+  span in both files.
+- 2026-10-19, all: old outlines hugged the land (wall 28-47%). Fix: a second
+  `sculpt.py --grow 14 --no-widen` pass once the base was `openField`.
+- 2026-10-19, the in-game look: cockpit views showed stacked slices that
+  swam with the camera's height. Cause: parallax at grazing angles. Fix in
+  the material (GROUND-LOOK.md).
+- 2026-10-19, zsh: `R="uv run …"; $R …` fails ("no such file"): zsh does
+  not split a variable into words. Put chains in a bash script.
+- 2026-10-19, still open: the border's wall rocks stand in rows along some
+  walls (Dust Terraces, Slag Pockets' south-east), placed by the border
+  scenery in C++; a wash on level-0 ground barely shows from above.
