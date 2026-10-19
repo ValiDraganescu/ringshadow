@@ -1354,8 +1354,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN3"))) T.Phase = 1900;
 			// -AcMmoShotsW4: seamless regions (2000-2026).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsW4"))) T.Phase = 2000;
-			// -AcMmoShotsB4: where the palettes meet (3800-3803).
-			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB4"))) T.Phase = 3800;
+			// -AcMmoShotsB4: where the palettes meet (4100-4103).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsB4"))) T.Phase = 4100;
 			// -AcMmoShotsL1: KSTR's next goal (2100-2112).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsL1"))) T.Phase = 2100;
 			// -AcMmoShotsU1: the HUD decluttered (2200-2216).
@@ -5197,7 +5197,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Finish();
 		return;
 	// MARK: -AcMmoShotsB4
-	case 3800:
+	case 4100:
 	{
 		// Every ground set round Prospect Landing built and its scenery laid
 		// (a few seconds after: planned on a worker, added a step a frame).
@@ -5222,12 +5222,12 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		Advance();
 		return;
 	}
-	case 3801:
-	case 3803:
+	case 4101:
+	case 4103:
 	{
 		// The views, each from its region's file: a passage (the widest
 		// opening of an edge, its middle) or a corner of Prospect Landing.
-		// 3801 pictures them; 3803 (-AcMmoShotsB4Perf=S) times the GPU at each.
+		// 4101 pictures them; 4103 (-AcMmoShotsB4Perf=S) times the GPU at each.
 		struct FView
 		{
 			const TCHAR* Name;
@@ -5253,7 +5253,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		APlayerController* Pc = GetWorld()->GetFirstPlayerController();
 		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
 		if (!Pc || !Terrain || !W4Cam.IsValid()) return;
-		const bool bPerf = T.Phase == 3803;
+		const bool bPerf = T.Phase == 4103;
 		double PerfFor = 0;
 		FParse::Value(FCommandLine::Get(), TEXT("AcMmoShotsB4Perf="), PerfFor);
 		if (W4Next >= int32(UE_ARRAY_COUNT(Views)))
@@ -5261,9 +5261,9 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			// Pictured: time them (stats on: not in the pictures), or done.
 			W4Next = 0;
 			W4Set = false;
-			T.Phase = !bPerf && PerfFor > 0 ? 3803 : 3802;
+			T.Phase = !bPerf && PerfFor > 0 ? 4103 : 4102;
 			T.PhaseAt = Now;
-			FAcBenchMeter::ShowStats(GetWorld(), T.Phase == 3803, true);
+			FAcBenchMeter::ShowStats(GetWorld(), T.Phase == 4103, true);
 			return;
 		}
 		const FView& V = Views[W4Next];
@@ -5372,7 +5372,7 @@ void UAcGameFlowSubsystem::TickMmoShots()
 				FAcBenchMeter::ShowStats(GetWorld(), false, true);
 				ShootClean(TEXT("b4-12-top-start-nw-off"), TEXT("the north-west corner with ac.GroundBleed 0: each palette stops at its edges"));
 				FAcBenchMeter::ShowStats(GetWorld(), true, true);
-				T.Phase = 3803;
+				T.Phase = 4103;
 			}
 			if (Bleed) Bleed->Set(1, ECVF_SetByCode);
 			B4Gpu.Reset();
@@ -5386,10 +5386,10 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		W4Next += 1;
 		W4Set = false;
 		ShootClean(V.Name, V.What);
-		T.Phase = 3801;
+		T.Phase = 4101;
 		return;
 	}
-	case 3802:
+	case 4102:
 		if (W4Cam.IsValid()) W4Cam->Destroy();
 		Check(Shots.Saved + Shots.Skipped == (B4OffShot ? 12 : 11), FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
