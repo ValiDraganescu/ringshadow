@@ -27,6 +27,9 @@
 //                       vertical FOV (default 30). For views from a doorway or inside a hall.
 //   -AcModelPose=P:PITCH,YAW,ROLL[;P:...]  turn part P from its rest about its pivot (UE degrees, in the
 //                       part's frame), e.g. a ramp open: -AcModelPose=ramp:0,0,-90.
+//   -AcModelEmission=P:V[;P:V...]  part P's emission (custom data 1) set to V: a lamp's strength, a
+//                       readout's number (the Mule's screen, M_AcReadout).
+//   -AcModelScale=P:X,Y,Z[;...]  part P scaled from its pivot (UE axes): a heap at a load.
 //   -AcModelView=V      front|right|back|left|top|3q: a camera on the focused model for the stencil sheet
 //                       (pipeline skill step 2). front|right|back|left|top are orthographic, all at one scale
 //                       and one centre (the bounds' centre; 1.2 x the longest side fits a 512 px panel); 3q is a

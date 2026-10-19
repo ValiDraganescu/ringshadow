@@ -12,9 +12,10 @@
 //             (c4-mule-driver, third person: the rider is drawn), the
 //             third-person view (c4-mule-tps) and the first-person one
 //             standing on the perch (c4-mule-fp); it drives on (W): rolling,
-//             its dust (c4-mule-dust). Then `citadel here` (a Citadel ahead,
-//             the Mule 4 cells out from its door) and `citadel door open`;
-//             it drives into the doorway (c4-mule-doorway) and on into the
+//             its dust (c4-mule-dust). Then `citadel here` (a Citadel ahead)
+//             and `mule door` (the Mule out of its open door, facing in, the
+//             pilot on foot by the hopper); the pilot climbs on again and
+//             drives into the doorway (c4-mule-doorway) and on into the
 //             hall, where the load is booked (c4-mule-booked: the toast).
 //             Checks: the prompts, the HUD's line, the boarding, the booking
 //             (the haul empty).
@@ -255,9 +256,10 @@ void UAcGameFlowSubsystem::TickMmoMuleShots(const FString& Step)
 		else Waited(TEXT("the Mule's load of 380 ore, 120 MH"), AskSeconds);
 		return;
 	case 3:
-		// Beside the Prospector, seen from ahead of both, on its side.
+		// Beside the Prospector (third person: its unit drawn), seen from ahead of both, on its side.
 		if (!Mule) return;
-		Camera(MuleAt(*Mule, 6.0, SideOf(*Mule) * 4.5), 2.0, MuleAt(*Mule, 0.0, SideOf(*Mule) * 1.3), 0.8, 45.f);
+		ThirdPerson(true);
+		Camera(MuleAt(*Mule, 8.5, SideOf(*Mule) * 6.5), 2.6, MuleAt(*Mule, 0.0, SideOf(*Mule) * 1.3), 0.8, 38.f);
 		if (Shot(TEXT("c4-mule-beside"))) Advance();
 		return;
 	case 4:
@@ -267,6 +269,7 @@ void UAcGameFlowSubsystem::TickMmoMuleShots(const FString& Step)
 		if (Shot(TEXT("c4-mule-screen")))
 		{
 			ViewPilot();
+			ThirdPerson(false);
 			Advance();
 		}
 		return;
@@ -299,7 +302,7 @@ void UAcGameFlowSubsystem::TickMmoMuleShots(const FString& Step)
 	case 6:
 		// The driver on the perch (drawn in third person), from ahead and to its side.
 		ThirdPerson(true);
-		Camera(MuleAt(*U, 4.0, 2.8), 2.1, MuleAt(*U, 0.5, 0.0), 1.2, 42.f);
+		Camera(MuleAt(*U, 5.6, 3.6), 2.3, MuleAt(*U, 0.2, 0.0), 1.0, 40.f);
 		if (Shot(TEXT("c4-mule-driver"))) Advance();
 		return;
 	case 7:
@@ -321,7 +324,7 @@ void UAcGameFlowSubsystem::TickMmoMuleShots(const FString& Step)
 		ThirdPerson(true);
 		Pilot->SetTestInput(FVector2D(0, -1), Pilot->Yaw());
 		if (Since() < 3.0) return;
-		Camera(MuleAt(*U, -0.5, -SideOf(*U) * 4.5 - 0.5), 1.3, MuleAt(*U, -1.2, 0.0), 0.5, 45.f);
+		Camera(MuleAt(*U, -6.5, -3.5), 1.6, MuleAt(*U, -1.0, 0.0), 0.5, 42.f);
 		if (Shot(TEXT("c4-mule-dust")))
 		{
 			Pilot->SetTestInput(FVector2D::ZeroVector, Pilot->Yaw());
@@ -331,27 +334,54 @@ void UAcGameFlowSubsystem::TickMmoMuleShots(const FString& Step)
 		}
 		return;
 	case 10:
+		// The Mule out of the Citadel's open door, facing in (`mule door`: the
+		// pilot on foot by its hopper).
 		if (!C)
 		{
-			Waited(TEXT("a complete Citadel with a door by the Mule"), AskSeconds);
+			Waited(TEXT("a complete Citadel by the Mule"), AskSeconds);
 			return;
 		}
-		// Up to the door (its reach is 3 cells; the Mule stands 4 out), then open it.
-		ThirdPerson(true);
-		if (!DriveTo(C->position + ac::Vec2(0, 8.4), 0.4))
+		// Off the perch first (E · CLIMB OFF), as the server's line wants the pilot on foot.
+		if (U->kind == ac::UnitKind::mule)
 		{
-			Waited(TEXT("the Mule at the Citadel's door"), 20);
+			if (!Staged.bPressed)
+			{
+				Check(Prompt.Contains(TEXT("CLIMB OFF")), FString::Printf(TEXT("the driver's prompt (\"%s\")"), *Prompt));
+				Press();
+			}
+			Waited(TEXT("off the Mule"), AskSeconds);
+			return;
+		}
+		if (Staged.Settled < 0)
+		{
+			Check(Mmo->DevClock(TEXT("mule door")), TEXT("the Mule asked for at the Citadel's door (dev)"));
+			Staged.Settled = Now;
+		}
+		if (Mule && U->kind == ac::UnitKind::prospector && C->door->open >= 0.99
+			&& ac::distance(Mule->position, C->position + ac::Vec2(0, 9.5)) < 0.3)
+		{
+			Advance();
+		}
+		else Waited(TEXT("the Mule at the door, the door open, the pilot on foot"), AskSeconds);
+		return;
+	case 11:
+		// Back on (E · CLIMB ON).
+		if (!Mule) return;
+		if (!Staged.bPressed && !WalkTo(MuleAt(*Mule, ac::Mule::perchLocal.x, SideOf(*Mule) * 1.4), 0.4))
+		{
+			Waited(TEXT("at the Mule's perch again"), WalkSeconds);
 			return;
 		}
 		if (!Staged.bPressed)
 		{
-			Check(Mmo->DevClock(TEXT("citadel door open")), TEXT("the Citadel's door opened (dev)"));
-			Staged.bPressed = true;
+			Face(ac::Mule::perch(*Mule));
+			if (!Settle(1.0)) return;
+			Press();
 		}
-		if (C->door->open >= 0.99) Advance();
-		else Waited(TEXT("the door open"), 20);
+		if (U->kind == ac::UnitKind::mule) Advance();
+		else Waited(TEXT("aboard the Mule again"), AskSeconds);
 		return;
-	case 11:
+	case 12:
 	{
 		// Into the doorway, seen from outside (third person: its driver drawn).
 		ThirdPerson(true);
@@ -369,7 +399,7 @@ void UAcGameFlowSubsystem::TickMmoMuleShots(const FString& Step)
 		}
 		return;
 	}
-	case 12:
+	case 13:
 	{
 		// On into the hall: the load is booked (the haul empty, the toast).
 		ThirdPerson(false);

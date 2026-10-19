@@ -220,7 +220,9 @@ rocks = []
 for i in range(26):
     x, y = rnd.uniform(-0.8, 0.8) * IN_X, rnd.uniform(-0.75, 0.75) * IN_Y
     r = rnd.uniform(12, 22)
-    rocks.append(sphere(r, at=(HC + x, y, FLOOR + mound(x, y) - r * 0.55), squash=(1.4, 1.2, 0.6), steps=8))
+    # each turned its own way (two alike rocks shared buried faces: the mesh check reads them)
+    rocks.append(sphere(r, at=(HC + x, y, FLOOR + mound(x, y) - r * 0.55), squash=(1.4, 1.2, 0.6), steps=8,
+                        rot=(rnd.uniform(-6, 6), rnd.uniform(0, 360), rnd.uniform(-6, 6))))
 m.mesh(heap, "oreRock", rocks)
 # the crystals in clusters, the tallest in the middle (the concept's violet spray)
 for cx, cy, n, tall in ((-10, 0, 6, 46), (-50, -24, 4, 32), (36, 20, 4, 34), (56, -26, 3, 24), (-62, 30, 3, 24), (6, -40, 3, 22)):

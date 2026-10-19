@@ -182,6 +182,84 @@ The frontier pilots keep flying: the server presses the buttons for them.
 - The Mule model (H2) with the side load screen (room left, ore, MH), its
   hopper heap growing with the load, lamps, drive sounds.
 - HUD: "In the Mule: N ore, M MH" while driving or near it.
+
+### The Mule as built (c4-mule-look, 2026-10-19)
+
+- **Model** `mule_blue` (`unreal/Tools/Editor/models/mule.py`, a Geometry
+  Script model from concept H2, the coplanar check on): 3.00 long, 1.58
+  wide over the hubs, the hopper's rim 1.30, the beacon 1.72, a full heap's
+  crystals 1.78; the perch deck 0.35 up between the front wheel arches,
+  the driver standing at (+0.74, 0). Six knobbly wheels (`wheels_0..5`,
+  the front pair under `steers_0/1`), two levers with red knobs
+  (`levers_0/1`), a railed perch, a console, the nose with its grille,
+  four headlamps and the hazard bumper, the riveted deep-blue hopper (the
+  team colour) with a flared lip, two chrome MH tanks at its front corners
+  with a sight glass (`mhLevel_k`) and a dial (`needles_k`) each, the stack
+  (`exhaust`) and the orange `beacon`. Icon `mule` (art/models/mule/icon.py).
+- **The heap** (`heap`): Stardust Ore's dark rock and violet crystals,
+  hidden while empty, grown up from the hopper's floor with the load's
+  share of 1000 (a full load pokes over the rim). The sight glasses and
+  dials show the MH's share of 1000.
+- **The load screen**, one on each flank of the hopper: a fixed face
+  (`screens`, `models/mule_screen.py`: ROOM LEFT, "/ 1000", ORE, MH) and
+  live readouts on it: `roomDigits_k` (room left, four digits), `roomBar_k`
+  (ten cells, one a hundred of room), `oreDigits_k`, `mhDigits_k`. A
+  readout is drawn by the material `M_AcReadout`
+  (`unreal/Tools/Editor/make_readout_material.py`) from its part's
+  emission (custom data 1), so `PoseMule` shows a number by setting the
+  part's emission to it: seven-segment digits or a bar, no texture per
+  value, nothing but the instanced renderer.
+- **The pose** (`AcPoseVehicles.cpp:PoseMule`): the wheels roll with the
+  distance driven (held to 0.35 of a lug a frame, 18 lugs), the front pair
+  steers with the turn, both levers go forward with the drive (back to
+  reverse) and the left one further to turn right; the heap, gauges and
+  screens follow the load. The building lamps' language: headlamps 1.2 and
+  the screens lit with a driver aboard, dim parked; the orange beacon
+  steady with a driver, turning and glowing on and off while it rolls.
+- **The driver**: the rider (the pilot's Prospector, aboard) is drawn on
+  the perch by the renderer (`AcPoseVehicles::MuleRiderPlacement`, the
+  rider found through the Mule's `cargo`, which the snapshot carries), its
+  gripper and drill on the levers' knobs; hidden with the Mule in first
+  person.
+- **Cameras**: first person from the driver's eyes on the perch
+  (`cockpit_mule_blue`, the whole Mule copied by `models/cockpit_mule.py`
+  and posed by `PoseMule`; the eye at (0.45, 1.55), pitched 0.45 down, the
+  rail and the levers' knobs at the bottom of the view; it rocks as it
+  rolls); third person on a boom of 0.7 × the default (the Mule drawn as big
+  as a Firefly).
+- **E** (`AcMuleAct`, before the Citadel's acts): "E · CLIMB ON" at the
+  perch, "E · CLIMB OFF" driving it (so in the hall E climbs off; open the
+  door on foot), "E · FILL THE MULE" at the hopper while carrying (the
+  hopper wins over the perch then), "E · BUY MULE · 600 ORE · 150 MH" at a
+  finished Foundry with none of one's own. Board and leave are takes
+  (`FAcMmoClient::Want`), fill and buy `FAcMmoClient::MuleFill` and
+  `BuyMule`. Refusals are toasts (the prompt says them too): the client's
+  ("Not your Mule", "You have a Mule already", "Your Mule is rolling out",
+  the core's board and fill refusals) and the server's
+  (`TakeMuleRefusals`). The MMO card of a finished Foundry has MULE (its
+  price and roll-out) before DEMOLISH.
+- **HUD**: "In the Mule: N ore, M MH" under the reticle, driving it or
+  within 4 cells of one's own (`FAcPilotInfo::MuleLoad`); the dashboard's
+  bay shows its load and the room left. A Prospector carrying near its own
+  Mule is told "Tip it into your Mule's hopper, or walk into the Citadel".
+  The booking's toast (`Mule::bookedToast`, the realm's cut under it) only
+  for the pilot's own Mule.
+- **Effects and sounds**: dust from behind the back wheels (`dust_0/1`) and
+  a thin smoke from the stack while it rolls (`EAcKindBurst::MuleDust`);
+  ElevenLabs sounds (`Tools/AudioGen/mule.manifest.json`, picks by
+  `mule_pick.py`, takes in art/models/mule/sounds): `mulemove` as it pulls
+  away, the drive loop `muleengine` while it rolls (a murmur parked with a
+  driver), `mulegear` (a lever's clunk) as it starts or stops, `mulefill`
+  as a load is tipped in, the booking rings like an unload; the driver's
+  lines `vmule` and `muledeath` in the Prospector's voice. Its wreck
+  shatters into 12 chunks, the heap and readouts left out.
+- **Pictures**: [art/models/mule/renders](../art/models/mule/renders): the
+  model row (`art/models/mule/shots.sh`: 3/4 in both team colours, the
+  side at empty, half and full, the screens, front, top) and the game
+  (`-AcFlowTest=mmomuleshots -AcMmoShots=DIR -AcMmoClockHour=11`,
+  `AcMmoMuleShots.cpp`: beside a Prospector, the screen, the driver on the
+  perch, third and first person, the dust, the Citadel's doorway, the
+  booking's toast).
 - The held load in the gripper 2× bigger.
   As built (c4-gate): `AcPoseInfantry::HeldLoadScale` (2) on the model
   (`PoseProspector`) and in the first-person cockpit (`AcCockpitKinds`);

@@ -6,8 +6,8 @@ at its shoulders and the hopper behind.
 
 Contract (AcCockpitKinds.cpp, PoseMuleCockpit): rig > level > model_root > model_<unit part>, every part of the Mule
 copied with its pivot and parent, so PoseMule drives them (the wheels, the steering, the levers, the heap, the gauges,
-the readouts, the lamps); model_root also carries the unit root's meshes. The eye (AcKindTable: (0.74, 1.55, 0), the
-driver's eyes over the perch) has nothing of the Mule within 40 cm of it, so nothing is left out.
+the readouts, the lamps); model_root also carries the unit root's meshes. The eye (AcKindTable: (0.45, 1.55, 0), behind
+the driver's eyes over the perch, pitched 0.45 down) has nothing of the Mule within 40 cm of it, so nothing is left out.
 """
 import os
 import sys

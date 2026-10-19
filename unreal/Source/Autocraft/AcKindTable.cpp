@@ -256,11 +256,12 @@ namespace
 			// deck 0.35, a Prospector's eyes 1.2 over its feet), a little back
 			// and looking down, so the levers, the rail and the nose are at the
 			// bottom of the view.
-			L.Eye = FVector(0.55, 1.5, 0);
-			L.StartPitch = -0.42;
-			// Third person: the boom over the hopper, a little longer (3 long).
+			L.Eye = FVector(0.45, 1.55, 0);
+			L.StartPitch = -0.45;
+			// Third person: the boom over the hopper, shorter than the reach
+			// of its 3 cells would make it (the Mule drawn as big as a Firefly).
 			L.BoomLift = 0.3f;
-			L.BoomLength = 1.25f;
+			L.BoomLength = 0.7f;
 			L.Rig = EAcKindCockpitRig::UnitModel;
 			Minimap(L, 2.2);
 			// The load and the readouts are not a wreck.
