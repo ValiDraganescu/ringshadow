@@ -304,6 +304,10 @@ private:
 	/// Prospector, its screen, the driver aboard, first and third person,
 	/// its dust, the Citadel's doorway, the booking): AcMmoMuleShots.cpp.
 	void TickMmoMuleShots(const FString& Step);
+	/// C4: `mmomuledrive` (the Mule's drive pictured: round its turning
+	/// circle, nothing at a standstill, up a slope, refused at a steep face):
+	/// AcMmoMuleDriveShots.cpp.
+	void TickMmoMuleDriveShots(const FString& Step);
 	/// `mmovisor` (the visor's rain and its wiper, first person in the
 	/// rain): AcMmoVisorFlowTest.cpp.
 	void TickMmoVisorFlow(const FString& Step);

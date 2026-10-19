@@ -135,7 +135,7 @@ The manager's rulings on the gaps (Q1 to Q6) and what the code settled:
   ahead, the Prospector by its door), `mule here` (the Mule out at once
   beside the Prospector), `mule ready`, `mule door` (the Mule outside the
   realm Citadel's door facing in, the Prospector by its hopper), `mule load
-  N [MH]`.
+  N [MH]`; since c4-drive `mule slope` and `mule steep` ("The drive").
 - **Tests.** Core `MuleTests.cpp` (fill, full, overfill, board and ride and
   leave, speed, book in the hall not the doorway, the cut and Stardust
   heart, the Prospector's own unload, destroyed, repair, the Brood, the
@@ -520,6 +520,18 @@ the user's to tune by feel.
   open ground is too steep for wheels. Two sites are not on wheels: the
   Dust vault (dust-terraces, a cliff-hop vault) and the Lander wreck
   (start).
+- **Pictures**: [art/models/mule/drive](../art/models/mule/drive):
+  `before-after-top.png` (from above: W + D for 8 s and D alone standing,
+  before and now, from the drive's numbers); `turn-top.gif` and
+  `turn-top-sheet.jpg` (the game, from a camera over its turning circle, a
+  frame every 2 s); `c4-drive-turn-tps`, `c4-drive-standstill`;
+  `c4-drive-slope` and `c4-drive-slope-back` (pitched and rolled on a slope
+  it climbs); `c4-drive-steep` and `c4-drive-steep-tps` (standing at a face
+  too steep, the dashboard's refusal). The flow `-AcFlowTest=mmomuledrive
+  -AcMmoShots=DIR -AcMmoClockHour=11` (`AcMmoMuleDriveShots.cpp`) takes them
+  and checks no turn at a standstill, the circle's radius and the refusal;
+  the server's dev lines `mule slope` and `mule steep` set the pilot's Mule
+  short of a slope it climbs, or of a face too steep for it.
 - **Tests**: core `DriveTests.cpp` (the gear of every kind; no turn at a
   standstill; the turning circle; reverse; tracks pivot; the AI reaching a
   point behind without pivoting, the Mule backing and filling; the tilt on

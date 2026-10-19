@@ -9,6 +9,7 @@
 
 #include "Mule.h"
 
+#include <cmath>
 #include <cstdio>
 #include <sstream>
 
@@ -271,6 +272,51 @@ std::string WorldMap::devMule(const std::string& line) {
         sim.reindex();
         return "dev: mule door: mule " + std::to_string(m.id) + " at the door of citadel " + std::to_string(c->id);
     }
+    if (what == "slope" || what == "steep") {
+        // C4, the drive (docs/haul-and-ferry.md "The drive"): the pilot's
+        // Mule set 6 cells short of a slope of the region's ground, facing
+        // up it on gentle open ground: `slope` one its wheels climb (12° to
+        // 20°), `steep` one too steep for them (28° to 40°, ground a walker
+        // stands on). The nearest such within 40 cells.
+        if (!p.mule || !p.mule->unit || p.mule->region != r) return "dev: mule " + what + ": no Mule out here";
+        const auto mi = sim.unitIndex(*p.mule->unit);
+        if (!mi || !sim.nav || !sim.field) return "dev: mule " + what + ": no Mule out here";
+        Unit& m = st.units[size_t(*mi)];
+        const bool steep = what == "steep";
+        const double lo = std::tan((steep ? 28.0 : 12.0) * pi / 180), hi = std::tan((steep ? 40.0 : 20.0) * pi / 180);
+        const double flat = std::tan(6.0 * pi / 180);
+        const NavGrid& nav = *sim.nav;
+        std::optional<std::pair<Vec2, double>> best;
+        for (int64_t i = 0; i < nav.width * nav.height; i++) {
+            if (!nav.free(i)) continue;
+            const Vec2 q = nav.centre(i);
+            if (distance(q, m.position) > 40 || (best && distance(q, m.position) >= distance(best->first, m.position))) continue;
+            for (int k = 0; k < 16; k++) {
+                const Vec2 dir(std::cos(k * pi / 8), std::sin(k * pi / 8));
+                const double up = sim.groundPitch(m, q, dir);
+                if (!(up >= lo && up <= hi)) continue;
+                // Its run-up: open, gentle ground 6 to 9 cells back.
+                bool clear = true;
+                for (double t = 0.5; t <= 9 && clear; t += 0.5) {
+                    const Vec2 b = q - dir * t;
+                    clear = nav.walkable(b) && !nav.inRock(b) && (t < 6 || std::abs(sim.groundPitch(m, b, dir)) < flat);
+                }
+                if (!clear) continue;
+                best = std::make_pair(q - dir * 6, std::atan2(dir.y, dir.x));
+                break;
+            }
+        }
+        if (!best) return "dev: mule " + what + ": no such slope here";
+        m.position = best->first;
+        m.heading = best->second;
+        if (Pilot* driver = sim.pilotFor(m.id)) driver->heading = m.heading;
+        sim.reindex();
+        const Vec2 g = regions_[r]->places()->regionAt(m.position);
+        char out[160];
+        std::snprintf(out, sizeof out, "dev: mule %s: mule %lld at (%.1f, %.1f) facing %.2f", what.c_str(), (long long)m.id, g.x, g.y,
+                      m.heading);
+        return out;
+    }
     if (what == "load") {
         int64_t ore = 0, mh = 0;
         in >> ore >> mh;
@@ -280,7 +326,7 @@ std::string WorldMap::devMule(const std::string& line) {
         regions_[p.mule->region]->simulation().state.units[size_t(*i)].haul = Haul{ore, mh};
         return "dev: mule load: " + std::to_string(ore) + " ore, " + std::to_string(mh) + " MH";
     }
-    return "dev: mule: '" + what + "' is not foundry, here, ready, door or load N [MH]";
+    return "dev: mule: '" + what + "' is not foundry, here, ready, door, slope, steep or load N [MH]";
 }
 
 void WorldMap::muleTold(const PilotState& p, net::ProgressMessage& m) const {
