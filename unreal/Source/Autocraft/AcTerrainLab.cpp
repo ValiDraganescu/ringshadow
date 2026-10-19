@@ -359,6 +359,36 @@ bool UAcTerrainLabShots::ShowRegion(const int32 RegionIndex)
 			if (Pose.Over == Anchor || ac::length(W.position - Anchor) < ac::length(Pose.Over - Anchor)) Pose.Over = W.position;
 		Note(TEXT("top"), Pose, Pose.Over);
 	}
+	// Named poses at fixed region cells, for before-and-after stills of one
+	// spot: -AcTerrainLabPoses=REGION:NAME@X,Z,rts (the RTS camera over the
+	// cell) or REGION:NAME@X,Z,DX,DZ,PITCH (the eye there looking along
+	// DX,DZ), separated by ';'. List NAME in -AcTerrainLabViews.
+	{
+		FString Spec;
+		FParse::Value(FCommandLine::Get(), TEXT("AcTerrainLabPoses="), Spec, /*bShouldStopOnSeparator*/ false);
+		TArray<FString> Entries;
+		Spec.ParseIntoArray(Entries, TEXT(";"));
+		const ac::Vec2 Origin(Map.bounds.minX, Map.bounds.minZ);
+		for (const FString& Entry : Entries)
+		{
+			FString Head, Tail, Id, Name;
+			if (!Entry.Split(TEXT("@"), &Head, &Tail) || !Head.Split(TEXT(":"), &Id, &Name) || Id != R.Id) continue;
+			TArray<FString> V;
+			Tail.ParseIntoArray(V, TEXT(","));
+			if (V.Num() < 3) continue;
+			const ac::Vec2 P = Origin + ac::Vec2(FCString::Atod(*V[0]), FCString::Atod(*V[1]));
+			FPose Pose;
+			if (V[2] == TEXT("rts"))
+			{
+				Pose.bRts = true;
+				Pose.bFound = true;
+				Pose.Over = P;
+			}
+			else if (V.Num() >= 5)
+				Pose = Eye(P, ac::normalize(ac::Vec2(FCString::Atod(*V[2]), FCString::Atod(*V[3]))), FCString::Atod(*V[4]));
+			Note(*Name, Pose, P);
+		}
+	}
 
 	UAcSimSubsystem* SimSys = GetWorld()->GetSubsystem<UAcSimSubsystem>();
 	SimSys->ShowStill(&Sim, ac::MapChoice{Parsed.file->style, Parsed.file->size, 2});
