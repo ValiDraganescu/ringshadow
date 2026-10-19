@@ -359,6 +359,13 @@
 //   01 a tightly packed defence on The Fork's floor by the prize, its guns'
 //      footprints touching, wave 3 coming at it
 //
+// -AcMmoShotsC3Aim (as Z4's): an AA tower in The Fork's east arm firing at
+// wave 4's Gloamwings (docs/guns-and-practice.md "Range and line of sight":
+// every weapon aims at the body at its height), from beside the tower, each
+// picture just after a salvo leaves, DIR/c3aim-NN-moment.png:
+//   01-04 the pods pitched up at a Gloamwing, the missiles on their way to
+//         its body and bursting there
+//
 // -AcMmoShotsZ1 (at 11:00, clear weather, every region been to): the first
 // canyon zone, The Fork in Cold Fork (docs/regions.md "zones"), the pilot
 // taken into its gorge by the server's dev line (`brood zone here`), a
@@ -1227,7 +1234,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ2"))
 			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP1")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ3"))
 			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ4")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR3"))
-			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN4")))
+			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsS4")) || FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsN4"))
+			|| FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC3Aim")))
 		{
 			if (double Hour = 0; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoClockHour="), Hour)) FCommandLine::Append(TEXT(" -AcMmoClockHour=11"));
 			if (FString W; !FParse::Value(FCommandLine::Get(), TEXT("AcMmoWeather="), W)) FCommandLine::Append(TEXT(" -AcMmoWeather=clear"));
@@ -1322,6 +1330,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsA2"))) T.Phase = 2900;
 			// -AcMmoShotsZ4: free placement in canyons (3100-3103).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsZ4"))) T.Phase = 3100;
+			// -AcMmoShotsC3Aim: an AA tower firing at Gloamwings (3800-3806).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsC3Aim"))) T.Phase = 3800;
 			// -AcMmoShotsR2: realm projects (3200-3206).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsR2"))) T.Phase = 3200;
 			// -AcMmoShotsR3: a Citadel a region (3300-3310).
@@ -6710,6 +6720,123 @@ void UAcGameFlowSubsystem::TickMmoShots()
 	case 3103:
 		if (W4Cam.IsValid()) W4Cam->Destroy();
 		Check(Shots.Saved + Shots.Skipped >= 1, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		Finish();
+		return;
+	// MARK: -AcMmoShotsC3Aim
+	case 3800:
+	{
+		// Seated; Cold Fork's zone from its file; the pilot taken into The Fork.
+		if (!(U && Mmo->World() && Since() > 2.0)) return;
+		FString Text;
+		if (FFileHelper::LoadFileToString(Text, *FPaths::Combine(FPaths::ProjectDir(), TEXT("server/regions/cold-fork.json"))))
+		{
+			const ac::region::Parsed P = ac::region::parse(TCHAR_TO_UTF8(*Text));
+			if (P.file && !P.file->zones.empty()) Z1File = *P.file;
+		}
+		Check(Z1File.IsSet(), TEXT("c3aim: Cold Fork's file has its zone"));
+		if (!Z1File) return Finish();
+		Check(Mmo->DevClock(TEXT("brood clear\nbrood zone here")), TEXT("c3aim: the server takes the pilot to The Fork"));
+		Advance();
+		return;
+	}
+	case 3801:
+	{
+		// In Cold Fork, its ground built: two AA towers by the east arm (as
+		// Z2's), then wave 4, its Gloamwings down that arm.
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		const TOptional<FAcRegionAround> Ground = Mmo->HereGround();
+		const int32 Sets = Terrain ? Terrain->NumSets() : 0, Ready = Terrain ? Terrain->NumSetsComplete() : 0;
+		if (!(U && Ground && Ground->Id == TEXT("cold-fork") && Sets >= 4 && Ready == Sets && Since() > 3.0))
+		{
+			TimedOut(TEXT("c3aim: in Cold Fork, its ground built"), 120);
+			return;
+		}
+		int32 Placed = 0;
+		if (S)
+			for (const ac::Structure& B : S->structures)
+				if (B.kind == ac::StructureKind::sentinel && B.hp > 0 && B.complete()) Placed++;
+		if (!W4Set)
+		{
+			Check(Mmo->DevClock(TEXT("canyon reset\ncanyon place sentinel 136 20.5 133 24")), TEXT("c3aim: two AA towers by the east arm"));
+			W4Set = true;
+			W4ShotAt = Now;
+			return;
+		}
+		if (Placed == 0 || Now - W4ShotAt < 2.0)
+		{
+			TimedOut(TEXT("c3aim: the AA towers placed"), 30);
+			return;
+		}
+		Check(Mmo->DevClock(TEXT("canyon send 4")), TEXT("c3aim: wave 4 sent, its Gloamwings down the east arm"));
+		W4Set = false;
+		Advance();
+		return;
+	}
+	case 3802:
+	case 3803:
+	case 3804:
+	case 3805:
+	{
+		// A tower with a Gloamwing in its sights: the camera off to the side
+		// of the line between them, low, both in frame; the picture a moment
+		// after a salvo leaves (the missiles on their way, then bursting).
+		APlayerController* Pc = GetWorld()->GetFirstPlayerController();
+		const AAcTerrain* Terrain = AAcTerrain::Find(GetWorld());
+		const UAcEffects* Fx = UAcEffects::Get(this);
+		if (!Pc || !Terrain || !Fx || !S) return;
+		if (!W4Cam.IsValid())
+		{
+			FActorSpawnParameters Params;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			W4Cam = GetWorld()->SpawnActor<ACameraActor>(Params);
+			W4Cam->GetCameraComponent()->SetConstraintAspectRatio(false);
+			W4Cam->GetCameraComponent()->SetFieldOfView(70.f);
+		}
+		if (IConsoleVariable* Veil = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.PilotVeil"))) Veil->Set(0, ECVF_SetByCode);
+		const ac::Structure* Tower = nullptr;
+		const ac::Unit* Wing = nullptr;
+		for (const ac::Structure& B : S->structures)
+		{
+			if (B.kind != ac::StructureKind::sentinel || !(B.hp > 0) || !B.target) continue;
+			for (const ac::Unit& X : S->units)
+				if (X.id == *B.target && X.kind == ac::UnitKind::gloamwing && X.hp > 0) Tower = &B, Wing = &X;
+			if (Tower) break;
+		}
+		if (!Tower || !Wing)
+		{
+			// The wave shot down: another wave 4 (every 8 s while none is in sight).
+			if (Since() > 8.0 && Now - W4ShotAt > 8.0)
+			{
+				Check(Mmo->DevClock(TEXT("canyon send 4")), TEXT("c3aim: wave 4 again"));
+				W4ShotAt = Now;
+			}
+			TimedOut(TEXT("c3aim: an AA tower with a Gloamwing in its sights"), 120);
+			return;
+		}
+		// Behind the tower and off to its side, a little over its head,
+		// looking at the Gloamwing's body (its ground and its height): the
+		// tower, the pods and the flyer in frame.
+		const ac::Vec2 Along = ac::normalize(Wing->position - Tower->position + ac::Vec2(0.001, 0));
+		const ac::Vec2 Eye = Tower->position - Along * 4.5 + ac::Vec2(-Along.y, Along.x) * 3.5;
+		const double Floor = Terrain->FieldHeight(Tower->position);
+		const FVector EyeW = AcSpace::ToWorld(Eye, FMath::Max(Terrain->FieldHeight(Eye), Floor) + 2.6);
+		const FVector BodyW = AcSpace::ToWorld(Wing->position, Terrain->FieldHeight(Wing->position) + (Wing->bug ? Wing->bug->height : 0.0));
+		const FVector TowerW = AcSpace::ToWorld(Tower->position, Floor + 1.2);
+		W4Cam->SetActorLocationAndRotation(EyeW, ((BodyW * 0.6 + TowerW * 0.4) - EyeW).Rotation());
+		if (Pc->GetViewTarget() != W4Cam.Get()) Pc->SetViewTarget(W4Cam.Get());
+		const TArray<double>* Fired = Fx->SlitShots(Tower->id);
+		const double After = Fired && Fired->Num() > 0 ? S->time - (*Fired)[0] : -1.0;
+		// Each picture a little later in the salvo than the last.
+		const double From = 0.06 + 0.07 * double(T.Phase - 3802);
+		if (Since() < 1.0 || After < From || After > From + 0.12) return;
+		static const TCHAR* const Names[] = {TEXT("c3aim-01-salvo"), TEXT("c3aim-02-salvo"), TEXT("c3aim-03-salvo"), TEXT("c3aim-04-salvo")};
+		ShootClean(Names[T.Phase - 3802], FString::Printf(TEXT("an AA tower's salvo %.2f s out at a Gloamwing %.1f cells up"), After,
+			Wing->bug ? Wing->bug->height : 0.0));
+		return;
+	}
+	case 3806:
+		if (W4Cam.IsValid()) W4Cam->Destroy();
+		Check(Shots.Saved + Shots.Skipped >= 4, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
 		Finish();
 		return;
 	// MARK: -AcMmoShotsR2
