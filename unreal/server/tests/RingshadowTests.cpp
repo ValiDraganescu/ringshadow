@@ -76,22 +76,28 @@ TEST(ringshadow_load_drilled_under_the_band_carries_half_again) {
     ASSERT_TRUE(sim.map.has_value());
     const GroundRect bounds = sim.map->bounds;
     const Vec2 at = sim.state.patches[0].position;
-    // A moment the deposit is deep in the band and stays there 30 s.
-    const auto s = Ringshadow::next(0);
-    double under = -1;
-    for (double t = s.start; t + 30 < s.end && under < 0; t += 0.5)
-        if (Ringshadow::cover(t, at, bounds) >= 1.0 && Ringshadow::cover(t + 30, at, bounds) >= 1.0) under = t;
-    if (under < 0) {
-        // The edges move ~2.6 cells a second: 30 s inside always exists on a medium region.
-        for (double t = s.start; t + 20 < s.end && under < 0; t += 0.5)
-            if (Ringshadow::cover(t, at, bounds) >= 1.0 && Ringshadow::cover(t + 20, at, bounds) >= 1.0) under = t;
-    }
-    ASSERT_TRUE(under > 0);
-
-    const int64_t plain = drill(s.start - 200);
+    const int64_t plain = drill(Ringshadow::next(0).start - 200);
     ASSERT_TRUE(plain > 0);
-    const int64_t swept = drill(under);
-    EXPECT_EQ(swept, int64_t(std::llround(double(plain) * Ringshadow::oreBonus)));
-    // After the sweep it is plain again.
-    EXPECT_EQ(drill(s.end + 10), plain);
+    // Both sweeps of the day, each moving its own way (the ring's arc
+    // crosses the sun differently at 11:30 and 16:00).
+    double from = 0;
+    for (int i = 0; i < 2; ++i) {
+        const auto s = Ringshadow::next(from);
+        from = s.end;
+        EXPECT_EQ(s.index, i);
+        // A moment the deposit is deep in the band and stays there 30 s.
+        double under = -1;
+        for (double t = s.start; t + 30 < s.end && under < 0; t += 0.5)
+            if (Ringshadow::cover(t, at, bounds) >= 1.0 && Ringshadow::cover(t + 30, at, bounds) >= 1.0) under = t;
+        if (under < 0) {
+            // The edges move ~2.3 cells a second: 30 s inside always exists on a medium region.
+            for (double t = s.start; t + 20 < s.end && under < 0; t += 0.5)
+                if (Ringshadow::cover(t, at, bounds) >= 1.0 && Ringshadow::cover(t + 20, at, bounds) >= 1.0) under = t;
+        }
+        ASSERT_TRUE(under > 0);
+        const int64_t swept = drill(under);
+        EXPECT_EQ(swept, int64_t(std::llround(double(plain) * Ringshadow::oreBonus)));
+        // After the sweep it is plain again.
+        EXPECT_EQ(drill(s.end + 10), plain);
+    }
 }

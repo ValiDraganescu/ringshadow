@@ -254,14 +254,20 @@ double Rules::hourAt(double time, double day, std::optional<double> held) {
 }
 
 double Rules::sunHeight(double hour) {
-    // The sun's arc (`Daylight.sun(hour:)`): from sunrise over the noon
-    // point (-60, 110, -55, SceneKit axes, Y up) to sunset by day, under
-    // the ground by night. Its height is the noon point's, by the cosine.
-    const double noonY = 110.0 / std::sqrt(60.0 * 60.0 + 110.0 * 110.0 + 55.0 * 55.0);
+    return std::asin(max(-1.0, min(1.0, sunToward(hour).y))) * 180.0 / pi;
+}
+
+Vec3 Rules::sunToward(double hour) {
+    // The sun's arc (`Daylight.sun(hour:)`): a half turn from sunrise over
+    // the noon point (SceneKit axes, Y up, which are the sim's) to sunset by
+    // day, the other half under the ground by night, about the axis
+    // perpendicular to the noon point and to "west".
+    const Vec3 noon = normalize(Vec3(-60, 110, -55));
+    const Vec3 west = normalize(Vec3(-noon.z, 0, noon.x));
     const double day = sunset - sunrise;
     const double a = hour >= sunrise && hour <= sunset ? (hour - sunrise) / day * pi - pi / 2
                                                        : std::fmod(hour - sunset + 24.0, 24.0) / (24.0 - day) * pi + pi / 2;
-    return std::asin(max(-1.0, min(1.0, std::cos(a) * noonY))) * 180.0 / pi;
+    return normalize(std::sin(a) * west + std::cos(a) * noon);
 }
 
 double Rules::dark(double hour) {

@@ -527,6 +527,11 @@ struct AUTOCRAFTCORE_API Rules {
     static double hourAt(double time, double day = dayLength, std::optional<double> held = std::nullopt);
     /// How high the sun stands at `hour`, degrees (below 0 at night).
     static double sunHeight(double hour);
+    /// Toward the sun at `hour`, unit, sim axes (x east, y up, z south): from
+    /// sunrise over the noon point (-60, 110, -55) to sunset by day, under
+    /// the ground by night. The sky draws it (`AAcDaylight::SunToward`), the
+    /// ringshadow's band is cast by it (`Ringshadow::direction`).
+    static Vec3 sunToward(double hour);
     /// How dark it is at `hour`: 0 with the sun up, 1 soon after sunset
     /// (the lamps come on with it; sight closes in with it).
     static double dark(double hour);

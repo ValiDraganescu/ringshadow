@@ -126,7 +126,7 @@ public:
 	/// none, down to 0.3 deep in the band.
 	static double RingshadowSun;
 	/// Toward the sun at `Hour`, a unit vector in SceneKit axes (Y up),
-	/// below the ground at night (`Daylight.sun(hour:)`).
+	/// below the ground at night (`ac::Rules::sunToward`).
 	static FVector SunSceneKit(double Hour);
 	/// The same in Unreal axes (Z up).
 	static FVector SunToward(double Hour);

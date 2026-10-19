@@ -138,7 +138,7 @@ void AAcRingshadow::Tick(const float DeltaSeconds)
 	{
 		Begun = Next.start;
 		UE_LOG(LogAutocraft, Display, TEXT("ringshadow: sweep begins, %.0f s, toward bearing %.0f°"), ac::Ringshadow::duration,
-			ac::Ringshadow::bearing);
+			ac::Ringshadow::bearing(Next.index));
 	}
 	bOn = true;
 	Post->bEnabled = Material != nullptr;

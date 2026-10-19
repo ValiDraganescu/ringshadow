@@ -29,6 +29,8 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 
+#include "Ringshadow.h"
+
 namespace
 {
 	TAutoConsoleVariable<int32> CVarGasGiant(
@@ -43,8 +45,9 @@ namespace
 	constexpr double AngularRadius = 27.0;
 	constexpr double SpinRate = 0.0021;
 	constexpr double TiltScreen = 24.0, TiltEye = 14.0;
-	// Where it hangs: compass bearing and elevation of its middle, degrees.
-	constexpr double BearingDeg = 280.0, ElevationDeg = 12.0;
+	// Where it hangs: compass bearing and elevation of its middle, degrees
+	// (the core's: its rings cast the ringshadow's band).
+	constexpr double BearingDeg = ac::Ringshadow::giantBearing, ElevationDeg = ac::Ringshadow::giantElevation;
 		// The storm rides this latitude (radians); the winds are the material's
 	// `zonal` (keep the two the same).
 	constexpr double StormLat = 0.34;

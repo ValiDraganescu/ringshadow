@@ -1,9 +1,9 @@
 // The ringshadow sweep (docs/weather.md, "Ringshadow sweep"; docs/mmorpg-m7.md
 // E1): twice a world day the gas giant's rings throw a band of shadow that
-// crosses every region of the world, out of the giant's side of the sky
-// (bearing 280°) toward the far side. A pure function of the world clock
-// (`WorldClock`) and a ground point: the server pays the drilling bonus from
-// it and the client draws the band from it, with nothing new on the wire.
+// crosses every region of the world: the shadow of the ring's arc as it
+// slides across the sun. A pure function of the world clock (`WorldClock`)
+// and a ground point: the server pays the drilling bonus from it and the
+// client draws the band from it, with nothing new on the wire.
 #pragma once
 
 #include "AutocraftCoreApi.h"
@@ -30,9 +30,10 @@ struct AUTOCRAFTCORE_API Ringshadow {
     static constexpr double soft = 16;
     /// The band starts and ends this far outside the region, cells.
     static constexpr double margin = 25;
-    /// The way the band moves, compass degrees (0 north = -z, 90 east = +x):
-    /// away from the giant, which hangs at 280°.
-    static constexpr double bearing = 100;
+    /// Where the giant hangs, its middle: compass degrees (0 north = -z, 90
+    /// east = +x) and degrees above the horizon. The sky draws it there
+    /// (`FAcGasGiant::Direction`).
+    static constexpr double giantBearing = 280, giantElevation = 12;
     /// An ore load drilled under the band (cover at least `bonusCover`)
     /// carries this many times the ore, and so the XP when it is unloaded.
     static constexpr double oreBonus = 1.5;
@@ -42,6 +43,8 @@ struct AUTOCRAFTCORE_API Ringshadow {
 
     struct Sweep {
         double start = 0, end = 0;
+        /// Which of the day's sweeps: its hour is `hours[index]`.
+        int index = 0;
         bool operator==(const Sweep&) const = default;
     };
     /// The band at a moment: the way it moves (unit, cells), its leading and
@@ -52,8 +55,25 @@ struct AUTOCRAFTCORE_API Ringshadow {
         double soft = Ringshadow::soft;
     };
 
-    /// The unit vector the band moves along, ground cells (x, z).
-    static Vec2 direction();
+    /// Toward the giant's middle, unit, sim axes (x east, y up, z south).
+    static Vec3 giant();
+    /// Toward the sun as sweep `index` starts (`Rules::sunToward` at its hour).
+    static Vec3 sun(int index);
+    /// The unit vector sweep `index`'s band moves along, ground cells (x, z):
+    /// the shadow of the ring's arc. The arc runs along the great circle
+    /// through the giant `g` and the sun `s`; its edge, crossing the sun,
+    /// runs along that circle's tangent `t` there, so the edge's shadow on
+    /// the ground lies in the plane of `s` and `t`, along
+    /// e = normalize((s × t) × up), and the band moves across e. The sky
+    /// draws the arc sliding over the sun along the circle's normal: the
+    /// band moves the same way on the ground (Ringshadow.cpp has the sign).
+    /// 11:30: toward 186° (the sun at 301°, 53° up); 16:00: toward 169°
+    /// (the sun at 20°, 27° up).
+    static Vec2 direction(int index);
+    /// The same for any sun `s` and giant `g` (unit, sim axes, apart).
+    static Vec2 direction(Vec3 s, Vec3 g);
+    /// Its compass bearing, degrees (0 north = -z, 90 east = +x).
+    static double bearing(int index);
     /// The sweep running at `time` (nil: none).
     static std::optional<Sweep> at(double time, double day = WorldClock::dayLength);
     /// The first sweep that has not ended by `time` (the running one, or the next).

@@ -271,13 +271,9 @@ double AAcDaylight::HourAt(const double Time)
 
 FVector AAcDaylight::SunSceneKit(const double H)
 {
-	const FVector Noon = FVector(-60, 110, -55).GetSafeNormal();
-	const FVector West = FVector(-Noon.Z, 0, Noon.X).GetSafeNormal();
-	const double Day = Sunset - Sunrise;
-	const double A = H >= Sunrise && H <= Sunset
-		? (H - Sunrise) / Day * PI - PI / 2
-		: FMath::Fmod(H - Sunset + 24, 24.0) / (24 - Day) * PI + PI / 2;
-	return FMath::Sin(A) * West + FMath::Cos(A) * Noon;
+	// The core's sun (the server casts the ringshadow's band by it).
+	const ac::Vec3 S = ac::Rules::sunToward(H);
+	return FVector(S.x, S.y, S.z);
 }
 
 FVector AAcDaylight::SunToward(const double H)
