@@ -360,7 +360,7 @@ void UAcGameFlowSubsystem::TickMmoFerryFlow(const FString& Step)
 			{
 				Face(0.0);
 				FirstPerson(true);
-				Pitch(-0.35);
+				Pitch(-0.62);
 				if (Now - Run.Settled < 1.6) return;
 				if (!Run.bLiftShot)
 				{
