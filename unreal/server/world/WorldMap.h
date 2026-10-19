@@ -1085,7 +1085,7 @@ public:
     /// Prospector, free; refused while it has one), `mule ready` (the one
     /// rolling out is out now), `mule door` (the Mule out of the realm's
     /// Citadel here on its door's axis facing in, 9.5 cells from its middle,
-    /// the Prospector on foot beside its hopper), `mule load N [MH]` (its
+    /// the door open, the Prospector on foot beside its hopper), `mule load N [MH]` (its
     /// Mule holds N ore and MH MH).
     std::string devMule(const std::string& line);
     /// C3: the pilot demolishes building `structure` of the realm in its

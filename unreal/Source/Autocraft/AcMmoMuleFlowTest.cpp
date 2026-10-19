@@ -6,12 +6,12 @@
 //
 //   mmomule   The server's dev line puts a finished Foundry ahead (`mule
 //             foundry`, the pilot by its door). At it, "E · BUY MULE": E opens
-//             the Foundry's menu and E again buys: 600 ore and 150 MH leave
+//             the Foundry's menu (or buys) and E again buys: 600 ore and 150 MH leave
 //             the wallet, the Progress message tells the Mule rolling out;
 //             about 20 s later it is out of the Foundry's door. Then the
-//             staging: a Citadel ahead (`citadel here`), its door opened, the
-//             Mule set outside it facing in, the pilot by its hopper (`mule
-//             door`), 25 ore in the gripper (`carry ore 25`). At the hopper,
+//             staging: a Citadel ahead (`citadel here`), the Mule set outside
+//             its open door facing in, the pilot by its hopper (`mule door`),
+//             25 ore in the gripper (`carry ore 25`). At the hopper,
 //             "E · FILL THE MULE": E puts the load in (the Mule holds 25, the
 //             wallet unchanged). At the perch, "E · CLIMB ON": E, and the
 //             pilot drives the Mule. Driven straight ahead it goes in through
@@ -211,19 +211,20 @@ void UAcGameFlowSubsystem::TickMmoMuleFlow(const FString& Step)
 		Check(MuleFlow.Ore >= ac::Mule::ore() && MuleFlow.Hydrogen >= ac::Mule::hydrogen(),
 			FString::Printf(TEXT("mule: the wallet holds its price (%lld ore, %lld MH)"), (long long)MuleFlow.Ore, (long long)MuleFlow.Hydrogen));
 		PressE();
+		MuleFlow.BoughtAt = Now;
 		Advance();
 		return;
 	}
 	case 3:
 	{
-		// E again: bought. The wallet pays, the Progress message tells it.
-		if (!MuleFlow.bAsked && Since() > 0.5)
+		// Bought (a menu first: E again). The wallet pays, the Progress
+		// message tells it.
+		const ac::net::ProgressMessage* P = Mmo->Progress();
+		if (!MuleFlow.bAsked && Since() > 1.0 && !(P && P->mule))
 		{
 			MuleFlow.bAsked = true;
 			PressE();
-			MuleFlow.BoughtAt = Now;
 		}
-		const ac::net::ProgressMessage* P = Mmo->Progress();
 		if (!(P && P->mule && Side.ore <= MuleFlow.Ore - ac::Mule::ore()))
 		{
 			Waited(FString::Printf(TEXT("mule: bought, the wallet paid (\"%s\")"), *Note), AskSeconds);
@@ -253,30 +254,37 @@ void UAcGameFlowSubsystem::TickMmoMuleFlow(const FString& Step)
 		Check(Took > ac::Mule::rollOut() * 0.75, FString::Printf(TEXT("mule: out after %.1f s (rolls out in %.0f)"), Took, ac::Mule::rollOut()));
 		Check(Out->kind == ac::UnitKind::mule && F && ac::distance(Out->position, ac::Mule::door(F->position)) < 1.5,
 			TEXT("mule: at the Foundry's door"));
-		Check(Mmo->DevClock(TEXT("citadel here")), TEXT("mule: a Citadel asked for ahead of the pilot (dev)"));
 		Advance();
 		return;
 	}
 	case 5:
 	{
-		// The Citadel, its door opened; the Mule outside it facing in, the
-		// pilot by the hopper, 25 ore in the gripper.
+		// Turned away from the Foundry (the Citadel goes up ahead of the
+		// pilot, its door toward it: the Foundry must not stand in the way
+		// in), then the staging in one go (the server reads the dev file's
+		// lines together; a later write would replace an unread one): the
+		// Citadel, the Mule outside its open door facing in, the pilot by
+		// the hopper, 25 ore in the gripper.
+		if (!MuleFlow.bAsked)
+		{
+			Pilot->SetTestInput(FVector2D::ZeroVector, UE_DOUBLE_PI / 2);
+			if (Since() < 1.5) return;
+			MuleFlow.bAsked = true;
+			Check(Mmo->DevClock(TEXT("citadel here\nmule door\ncarry ore 25")),
+				TEXT("mule: a Citadel ahead, the Mule staged at its open door, a load in the gripper (dev)"));
+			return;
+		}
+		// The Citadel the Mule stands at.
 		const ac::Structure* C = nullptr;
 		for (const ac::Structure& B : S->state.structures)
-			if (B.kind == ac::StructureKind::citadel && B.complete() && B.door && ac::distance(B.position, U->position) < 16) C = &B;
+			if (B.kind == ac::StructureKind::citadel && B.complete() && B.door && Mule && ac::distance(B.position + ac::Vec2(0, 9.5), Mule->position) < 0.5)
+				C = &B;
 		if (!C)
 		{
-			Waited(TEXT("mule: a complete Citadel by the pilot"), AskSeconds);
+			Waited(TEXT("mule: the Mule staged by a Citadel's door"), AskSeconds);
 			return;
 		}
 		MuleFlow.Citadel = C->id;
-		if (!MuleFlow.bAsked)
-		{
-			MuleFlow.bAsked = true;
-			Check(Mmo->DevClock(TEXT("citadel door open")) && Mmo->DevClock(TEXT("mule door")) && Mmo->DevClock(TEXT("carry ore 25")),
-				TEXT("mule: the door opened, the Mule staged at it, a load in the gripper (dev)"));
-			return;
-		}
 		const bool bStaged = Mule && ac::distance(Mule->position, C->position + ac::Vec2(0, 9.5)) < 0.5
 			&& U->carrying == Load && ac::Simulation::doorOpen(*C);
 		if (!bStaged)
@@ -297,7 +305,7 @@ void UAcGameFlowSubsystem::TickMmoMuleFlow(const FString& Step)
 		}
 		if (!MuleFlow.bPressed)
 		{
-			WalkTo(ac::Mule::hopper(*Mule) + ac::Vec2(1.2, 0), 0.4, ac::Mule::hopper(*Mule));
+			WalkTo(ac::Mule::hopper(*Mule) + ac::Vec2(1.2, 0), 0.6, ac::Mule::hopper(*Mule));
 			if (!Prompt.Contains(TEXT("FILL")))
 			{
 				Waited(FString::Printf(TEXT("mule: at the hopper \"E · FILL THE MULE\" (\"%s\")"), *Prompt), WalkSeconds);
@@ -330,10 +338,12 @@ void UAcGameFlowSubsystem::TickMmoMuleFlow(const FString& Step)
 		if (!MuleFlow.bPressed)
 		{
 			const ac::Vec2 Perch = ac::Mule::perch(*Mule);
-			WalkTo(ac::Mule::point(*Mule, ac::Vec2(ac::Mule::perchLocal.x, -1.4)), 0.4, Perch);
+			WalkTo(ac::Mule::point(*Mule, ac::Vec2(ac::Mule::perchLocal.x, -1.4)), 0.6, Perch);
 			if (!Prompt.Contains(TEXT("CLIMB ON")))
 			{
-				Waited(FString::Printf(TEXT("mule: at the perch \"E · CLIMB ON\" (\"%s\")"), *Prompt), WalkSeconds);
+				Waited(FString::Printf(TEXT("mule: at the perch \"E · CLIMB ON\" (\"%s\", %.2f cells from the perch, task %d)"), *Prompt,
+						   ac::distance(U->position, Perch), int(U->task)),
+					WalkSeconds);
 				return;
 			}
 			if (!Settle(0.5)) return;
@@ -364,7 +374,9 @@ void UAcGameFlowSubsystem::TickMmoMuleFlow(const FString& Step)
 		const bool bBooked = U->haul && U->haul->total() == 0;
 		if (!(bIn && bBooked))
 		{
-			Pilot->SetTestInput(FVector2D(0, -1), Pilot->Yaw());
+			// The look along the hull: the move key then drives it ahead (a
+			// look off to the side would turn it).
+			Pilot->SetTestInput(FVector2D(0, -1), U->heading);
 			Waited(FString::Printf(TEXT("mule: driven into the hall, booked (%.1f cells from its middle)"), ac::distance(U->position, C->position)),
 				DriveSeconds);
 			return;

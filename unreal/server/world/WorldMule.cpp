@@ -235,15 +235,28 @@ std::string WorldMap::devMule(const std::string& line) {
     }
     if (what == "door") {
         // Out of the realm's Citadel here, on its door's axis facing in,
-        // its centre 9.5 cells from the hall's middle; the Prospector on
-        // foot beside its hopper (1.5 cells off the axis).
+        // its centre 9.5 cells from the hall's middle, the door open; the
+        // Prospector on foot beside its hopper (1.5 cells off the axis).
         if (!p.mule || !p.mule->unit || p.mule->region != r) return "dev: mule door: no Mule out here";
-        const Structure* c = nullptr;
-        for (const Structure& b : st.structures)
+        Structure* c = nullptr;
+        for (Structure& b : st.structures)
             if (b.kind == StructureKind::citadel && b.complete() && realm(b)) c = &b;
         if (!c) return "dev: mule door: no Citadel here";
         const auto mi = sim.unitIndex(*p.mule->unit);
         if (!mi) return "dev: mule door: no Mule out here";
+        // Its way in: open ground from there to the hall's middle.
+        {
+            Unit probe = st.units[size_t(*mi)];
+            const Structure shut = *c;
+            c->door = Door{1, true};
+            for (double y = 9.5; y >= 0; y -= 0.25)
+                if (!sim.pilotCanStand(probe, c->position + Vec2(0, y))) {
+                    c->door = shut.door;
+                    char out[120];
+                    std::snprintf(out, sizeof out, "dev: mule door: the way in is blocked %.2f cells out", y);
+                    return out;
+                }
+        }
         if (drivesMule(pilot, p)) take(pilot, *p.unit);
         Unit& m = st.units[size_t(*mi)];
         m.position = c->position + Vec2(0, 9.5);
