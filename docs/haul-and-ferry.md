@@ -571,10 +571,12 @@ not make sense to pass through is not passed through.
   square into the Mule stops at its surface, aslant it slides along it and
   round its end; a driven Mule stops at a Prospector, a Ranger, a bug or
   another Mule. On wheels the body is tested turned as the arc turns it.
-- **The Mule's ends** (the manager's Q3). Against buildings, rocks, ore and
-  the ground's edges its nose and tail count as its middle does (three
-  circles along it, as the Dropship's bay already tested): its nose stops at
-  a wall, not its middle 1.5 cells back. An end already in something where
+- **The Mule's ends** (the manager's Q3). Against buildings, rocks and ore
+  its nose and tail count as its middle does (three circles along it, as the
+  Dropship's bay already tested): its nose stops at a wall, not its middle
+  1.5 cells back. The ground under its ends is its wheels' to judge (the
+  climb limit, "The drive"): a cliff cell at a slope's foot under its nose
+  held it from a slope it climbs (`mmomuledrive`). An end already in something where
   it stands (set down against a wall) holds it no longer, so it drives out.
 - **Never stuck.** A body it already overlaps (spawned on it, a Mule rolled
   out onto it) holds only a step that goes deeper. A driven unit inside

@@ -513,10 +513,10 @@ bool Simulation::pilotCanStand(const Unit& u, Vec2 p, double heading) const {
     }
     const double r = Rules::radius(u.kind) * 0.8;
     // The ground, the rocks, the buildings and the ore for a circle of
-    // radius `r` at `q`.
-    auto clear = [&](Vec2 q) {
+    // radius `r` at `q` (without `ground`, the rocks, buildings and ore only).
+    auto clear = [&](Vec2 q, bool ground) {
         // Past a region's open edge (W4): it stands on the ground just inside.
-        if (map && map->edges) {
+        if (ground && map && map->edges) {
             const std::optional<Vec2> in = map->edges->standIn(map->bounds, q);
             if (!in) return false;
             q = *in;
@@ -529,7 +529,7 @@ bool Simulation::pilotCanStand(const Unit& u, Vec2 p, double heading) const {
         // `rocky`, and the circles decide.
         if (nav) {
             const bool swallowed = swallowedByCitadel(q);
-            if (!nav->standable(q) && !nav->rockyCell(q) && !(swallowed && swallowedDoodadCell(q))) return false;
+            if (ground && !nav->standable(q) && !nav->rockyCell(q) && !(swallowed && swallowedDoodadCell(q))) return false;
             if (!swallowed && nav->rockAt(q, NavGrid::clearance)) return false;
         }
         // A complete Citadel with the hall blocks by its walls and its shut door
@@ -563,15 +563,18 @@ bool Simulation::pilotCanStand(const Unit& u, Vec2 p, double heading) const {
         deck = walk == ShuttleWalk::deck;
     }
     if (!deck) {
-        if (!clear(p)) return false;
-        // A Mule's nose and tail meet them as its middle does (C5); an end
-        // already in something where it stands now (rolled out against a
-        // wall) holds it no longer, so it drives out.
+        if (!clear(p, true)) return false;
+        // A Mule's nose and tail meet rocks, buildings and ore as its middle
+        // does (C5; the ground under them is its wheels' to judge,
+        // `climbRefused`); an end already in something where it stands now
+        // (set down against a wall) holds it no longer, so it drives out.
         if (u.stats().hauler) {
             const double off = ac::max(0.0, Mule::length / 2 - r);
             const Vec2 to = Vec2(std::cos(heading), std::sin(heading)) * off;
             const Vec2 now = Vec2(std::cos(u.heading), std::sin(u.heading)) * off;
-            if ((!clear(p + to) && clear(u.position + now)) || (!clear(p - to) && clear(u.position - now))) return false;
+            if ((!clear(p + to, false) && clear(u.position + now, false)) || (!clear(p - to, false) && clear(u.position - now, false))) {
+                return false;
+            }
         }
     }
     // Another unit's body (C5).
