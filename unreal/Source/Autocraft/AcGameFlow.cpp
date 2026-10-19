@@ -2170,6 +2170,11 @@ void UAcGameFlowSubsystem::TickFlowTest()
 		TickMmoCitadelFlow(Step);
 		return;
 	}
+	if (Step == TEXT("mmovisor"))
+	{
+		TickMmoVisorFlow(Step);
+		return;
+	}
 	if (Step == TEXT("mmopractice"))
 	{
 		TickMmoPracticeFlow(Step);

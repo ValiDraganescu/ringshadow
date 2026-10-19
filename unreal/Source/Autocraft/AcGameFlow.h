@@ -300,6 +300,9 @@ private:
 	/// C1: `mmocitadel` (the Citadel's door, hall and corner gun through the
 	/// act key): AcMmoCitadelFlowTest.cpp.
 	void TickMmoCitadelFlow(const FString& Step);
+	/// `mmovisor` (the visor's rain and its wiper, first person in the
+	/// rain): AcMmoVisorFlowTest.cpp.
+	void TickMmoVisorFlow(const FString& Step);
 	/// C2: `mmopractice` (the build wheel, the target dummy, the gun's
 	/// rounds): AcMmoPracticeFlowTest.cpp.
 	void TickMmoPracticeFlow(const FString& Step);
