@@ -188,23 +188,52 @@ to the touch down. Not saved: a pilot saved in flight comes back on the target
 pad, as before.
 
 **The shape** (`ShuttleBay`, Shuttle.h; ship frame: +x the nose, +y its
-left, z up from the ground under the landed ship; c4-ship-look's model's
-numbers): the deck at z 0.5; inside x −2.5 … 2.36 (the bay 4 long and the
-cockpit nook up to the console's face), y −1 … 1, 2 tall; the hull from the
-jambs at x −2.72 to the nose tip at 4.1, the nacelles out to ±2.48; the nose
-block from x 2.62; the console x 2.36 … 2.68, |y| < 0.96, its desk up to z 1.08 under the lowered windshield; the ramp post in
-its niche x −2.42 … −2.10, y −1.10 … −0.88; the ramp hinged at x −2.5,
-z 0.5, 2 long, its foot on the ground at x −4.44, shut as a slab
-x −2.70 … −2.50. The ramp button at (−2.26, −0.84, 1.13), the take-off
-button at (2.50, 0, 1.20). `ShuttleBay::footprint()` gives the cameras the
-same slabs; `ShuttleBay::floor` the deck's and the ramp's height to stand a
-rider on.
+left, z up from the ground under the landed ship). Grown in C5 (the user,
+after playing C4: "too small inside ... double at least width and 3x in
+length ... too boxy"; c5-ship, 2026-10-20): the deck at z 0.6; inside
+x −6.8 … 6.6 (the bay 12 long, to x 5.2, and the cockpit nook up to the
+console's face), y −2 … 2 (4 wide), 2.6 tall (raised from 2: a bay 4 wide
+and 2 tall read as a tunnel; the ceiling at 3.2); the hull (its bounding
+box seen from above) from the tail's jambs at x −7.05 to the nose tip at
+9.3, ±2.62 at the chines; the nose solid from the console's back at 6.92,
+narrowing in steps (±2.62 to x 7.3, ±2.0 to 8.2, ±1.15 to the tip); the
+nacelles on their pylons out to ±4.56 from x −7.0 to −2.6, from z 2.4 up
+(over a walker's head: only the cameras meet them); the console
+x 6.6 … 6.92, |y| < 1.6, its desk up to z 1.18 under the swept windshield;
+the ramp post beside the right jamb x −6.72 … −6.40, y −2.10 … −1.88; the
+opening and the ramp ±1.6 wide (a Mule, 1.58, with room either side),
+jambs from there out to the walls; the ramp hinged at x −6.8, z 0.6, 2.6
+long (13.3°, gentle under the wheels' 25°), its foot on the ground at
+x −9.33, shut as a slab x −7.05 … −6.8. The ramp button at
+(−6.56, −1.84, 1.23), the take-off button at (6.75, 0, 1.30); a pilot
+presses them from `rampStand` (−6.0, −1.4) and `helmStand` (5.84, 0) (the
+frontier pilots, the dev lines, the tests, the flows). Two Mules fit in
+line with room to walk beside them (4 − 1.58 = 2.4 clear), or side by side
+(0.84 to spare). `ShuttleBay::footprint()` gives the cameras the same slabs
+(its radius reaches the ramp's foot); `ShuttleBay::floor` the deck's and
+the ramp's height to stand a rider on.
+
+**On its pad** (the manager's ruling, 2026-10-19): it stands aligned with
+the pad, its ramp toward the pad's front (+y), its nose to the back
+(`ShuttleBay::padHeading`), the hull centred on the pad
+(`ShuttleBay::onPad`: the frame's origin 1.125 behind the pad's middle,
+`hullMiddle`); the ramp's foot lies about 2 cells off the pad's front edge,
+clear of the call post at its front-right corner. The Landing Pad is the
+smallest odd square holding the hull aligned (17 × 17, c5-size-sim's
+`padHalfSide`). Only when the hull and ramp would cross the region's edge is
+it turned a quarter at a time. Its touch down pushes whoever stands under
+the hull out by the nearest side that stays on the region's ground. Aboard,
+the flight menu's pad is the one the ship stands on (`NearestPad` measures
+from the hull's middle: the console stands 4.7 cells off the pad's middle).
 
 **The pose** (`shuttlePose`, Shuttle.h): F2's path, moved from the client
 into the core: down onto the pad from high behind it, on the pad, up off it,
 two banking turns from its heading onto the way to the target pad, the dash,
-the approach (landing with its nose along the way), lifting away empty. The
-client calls it every frame with its own clock between snapshots.
+the approach along the pad's axis (in over the pad's front, nose first,
+landing aligned; a target behind the way swings round over the dash's last
+stretch, its end tangent held to 120 cells so the turn is not as wide as
+the flight), lifting away empty. The client calls it every frame with its
+own clock between snapshots.
 
 **The walk.** `Simulation::pilotCanStand` asks the ships first
 (`shuttleWalk`): the hull's sides, the nose, the console, the post and the
@@ -212,15 +241,14 @@ shut ramp (walkable from open 0.95, as the Citadel's door) block; on the
 deck or a ramp that is down the ground under it does not matter. A rider in
 flight walks only in its bay. A Mule meets them with its whole body (its
 middle and its two ends along its 3.0 length), so in the bay its middle
-stays between x −1.0 and 0.86. The AI's grid has a grounded ship's hull and
+stays between x −5.3 and 5.1. The AI's grid has a grounded ship's hull and
 ramp solid (the Brood and the mercenaries never walk in); nobody aboard is
 pushed out; nobody aboard crosses a region's edge on foot.
 
 **The steps.** Call: the request `CallShuttle` (the pad the pilot stands
-on, Pad link's reach), the ramp toward the caller, turned a quarter at a time
-until the hull and the ramp lie inside the region; one ship to a pad ("The
+on, Pad link's reach), aligned with the pad (above); one ship to a pad ("The
 Dropship is on its way", "The Dropship is here"). Its touch down moves
-whoever stands under the hull out by its nearest side. Ramp: the request
+whoever stands under the hull out (above). Ramp: the request
 `Ramp { open }`, within 1.5 cells of the ramp button inside (*assumed*;
 measured from the nearest point of the pressing unit's body, a driven
 Mule's box too); refused "Someone is on the ramp" (anyone's body over the
@@ -254,7 +282,7 @@ server presses the buttons for them; booked, they fly as before.
 region next door, seen, 200 MH; the reply names the target), `call`,
 `board` (a ship on the pad at once, shut, the Prospector at its take-off
 button), `ramp open|shut`, `mule` (the pilot's Mule, made if it has none,
-on the grounded ship's axis 3.5 cells behind the ramp's foot, facing it,
+on the grounded ship's axis 2 cells behind the ramp's foot, facing it,
 its Prospector on foot beside the perch: the game takes it).
 
 **Tests.** Core: ShuttleTests.cpp (the shape, the landing, the walk up the
@@ -296,6 +324,46 @@ World message), RolesTests' and WorldTests' flights, FrontierTests'
     The rear ramp hinges at the deck's back edge: down it lies on the
     ground 2.0 behind (104.5°). Renders with a Prospector for scale:
     [art/models/dropship/c4](../art/models/dropship/c4) (`model-*`).
+  - **Grown in C5** (c5-ship, 2026-10-20), the same `ferry_blue` remade
+    round the 12 × 4 bay, a ship rather than a box (concept
+    [shuttle-exterior-2](../art/models/dropship/concepts/shuttle-exterior-2.jpg):
+    a long fuselage, the cockpit in the nose, the ramp under the tail):
+    17.3 cells from the tail's hood to the nose tip, 5.2 wide at the chines
+    and 9.1 over the nacelles, 4.5 high on the roof's crest and 6.5 to the
+    fins' beacons. The hull is lofted (`strip` in ferry.py: one small loft
+    between neighbouring stations, so each stays convex): a rounded roof
+    (a superellipse of power 2.4) springing low (2.98) on flanks that lean
+    in 6 cm, highest amidships (4.46) and settling toward the brow and into
+    a narrowing hood over the ramp; chines along the flanks (a dark lower
+    facet out to the edge at ±2.62, a grey upper one back in), narrowing
+    along the nose to the tip; a swept windshield (the side panes' outer
+    edge 1.24 back, 38° tilt, the glass from z 1.30 at x 8.2 up to 3.15 at
+    6.75) over a short rounded nose with the team's blue cap. The team's
+    blue in two big flank panels with the white cross, grey panels fore and
+    aft, a hazard band over the chine, portholes. The nacelles (r 0.85,
+    4.4 long) high at the shoulders on swept pylons, the twin fins on their
+    backs canted out 14°, the beacons on the tips; four blue gear fairings
+    on the chines. Inside: 13 ribs, 8 cabin lamps (`cabinLamps_0..7`, each
+    with its light), wall boxes, pipes and rails over 12 cells, the ramp
+    post beside the right jamb, the console ±1.6 wide. The ramp 3.2 wide,
+    2.6 long, 103.3° open. The windshield's rain reads the glass's numbers
+    from `AcShuttleShip.h` (`GlassBottomX` …), the model's. Renders, C4
+    beside C5: [art/models/dropship/c5](../art/models/dropship/c5).
+  - **Nothing outside gets inside** (the user, 2026-10-19: "when we get
+    into the clouds, the clouds get into the ship"; the standing rule:
+    nothing outside gets inside a closed space, and nothing that should not
+    be passable is). The "clouds" were the dash's vapour puffs, big white
+    sprites put in the air ahead within 12 cells of the ship's axis, which
+    the ship flew through. Now they are put out past the nacelles, and the
+    particle materials (`make_particle_materials.py`, both masters) are cut
+    wherever a pixel is in the bay nearest the camera (`MPC_AcWorld`'s
+    `ShelterShip` box): vapour, dust and smoke from outside never show in
+    the bay (a Mule's own wheel dust in the bay goes too). The volumetric
+    cloud layer starts 1.6 km up, far over the flight. The bay's box now
+    reaches under the swept glass, 30 cm short of its foot
+    (`AcShelter::BayOf`, `Autocraft.Weather.Shelter.ShipBay`), so the
+    cockpit's air is dry too; `mmoferry` takes `ferry-6-bay-in-dash`, down
+    the bay in the dash.
   - **The pose** (`AcPoseFerry.h`, tested in `Autocraft.Pose.Ferry.*`):
     the ramp on its hinge, the buttons pushed in 1.5 and 2 cm for a
     quarter second on each press, the lamps, the wipers turning in the

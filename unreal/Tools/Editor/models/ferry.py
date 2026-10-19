@@ -284,7 +284,7 @@ m.mesh(root, "hullDark", strip([TAIL_X, 0.0, GLASS_B[0] - SIDE_BACK],
                                lambda x: [(-WALL_OUT, 35.0), (-WALL_OUT, 28.0), (-200.0, 18.0), (200.0, 18.0),
                                           (WALL_OUT, 28.0), (WALL_OUT, 35.0)]))
 # the nose: a rounded loft forward of the nose block, under the windshield's bottom line, the team's blue cap on its tip
-rings = [ring_box(GLASS_B[0] - 4, 112, 54, cz=80, n=16), ring_box(866, 96, 48, cz=78, n=16),
+rings = [ring_box(GLASS_B[0] - 4, 112, 50, cz=76, n=16), ring_box(866, 96, 48, cz=76, n=16),
          ring_box(902, 66, 38, cz=76, n=16), ring_box(TIP_X - 14, 34, 22, cz=76, n=16)]
 m.mesh(root, "hullLight", [loft(rings)])
 m.mesh(root, "team", [sphere(36, at=(TIP_X - 14, 0, 76), squash=(0.36, 1.0, 0.64), steps=16)])

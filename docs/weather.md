@@ -139,7 +139,10 @@ the camera). The materials share one test (`shelter_hlsl`).
 The walk-in Dropship's bay (C4, docs/haul-and-ferry.md) is a fifth box,
 turned with the ship (it banks and pitches in flight): the bay and the
 cockpit nook of the drawn ship nearest the camera within 80 m
-(`AcShelter::NearestBay`), from the deck slab to the ceiling, written every
+(`AcShelter::NearestBay`), from the deck slab to the ceiling and forward
+under the swept windshield to 30 cm short of the glass's foot (C5), the
+particles cut in it too (vapour, dust, smoke: the user's rule, nothing
+outside gets inside a closed space), written every
 frame it changes as `ShelterShip` (its centre) and `ShelterShipX`, `Y`, `Z`
 (its unit axes, each with its half size in w). The rain stops at its
 open ramp; the ramp is open sky. A driven unit in a landed ship's bay, or
