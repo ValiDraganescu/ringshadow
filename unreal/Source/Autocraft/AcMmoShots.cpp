@@ -103,6 +103,13 @@
 // The giant's comet impacts are off meanwhile (ac.GasGiant.Events 0). The clock
 // jumps to just before each moment (S1), about 40 s in all.
 //
+// -AcMmoShotsRingshadowAlign: the ring's arc on the sun and its shadow on
+// the land, each sweep, DIR/ra-HHMM-moment.png (docs/weather.md "Ringshadow
+// sweep"): ra-1130-eye, ra-1600-eye the pilot's eye 2.5 cells inside the
+// band's leading edge, the sun and the edge's line on the ground in one
+// frame; ra-1130-top, ra-1600-top from straight above the region's middle,
+// north up, half way through. The clock jumps to each moment.
+//
 // -AcMmoShotsStarfall (it adds -AcMmoStarfall=10 -AcMmoClockHour=17 unless
 // the run gives them: a starfall near the pilot 10 s after it comes, late in
 // the afternoon; docs/weather.md "Starfall"): third person on the start pad
@@ -656,6 +663,14 @@ namespace
 	double W4LastAt = -1;
 	double W4ShotAt = -1;
 	int32 W4Frames = 0;
+	/// -AcMmoShotsRingshadowAlign: the sweep (0 at 11:30, 1 at 16:00), its two
+	/// moments in time order (world clock; the eye's or the top-down), the
+	/// one being shot, the camera from above.
+	int32 RaSweep = 0;
+	int32 RaStep = 0;
+	double RaAt[2] = {0, 0};
+	bool RaTop[2] = {false, true};
+	TWeakObjectPtr<ACameraActor> RaCam;
 	/// -AcMmoShotsZ1: Cold Fork's file (its zone).
 	TOptional<ac::region::RegionFile> Z1File;
 	/// -AcMmoShotsZ2: the zone's turrets standing when the wave broke through.
@@ -1279,6 +1294,8 @@ void UAcGameFlowSubsystem::TickMmoShots()
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsP5"))) T.Phase = 200;
 			// -AcMmoShotsRingshadow: only the ringshadow sweep (300-315).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRingshadow"))) T.Phase = 300;
+			// -AcMmoShotsRingshadowAlign: the arc on the sun and its shadow (330-335).
+			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsRingshadowAlign"))) T.Phase = 330;
 			// -AcMmoShotsStarfall: only a starfall (400-414).
 			if (FParse::Param(FCommandLine::Get(), TEXT("AcMmoShotsStarfall"))) T.Phase = 400;
 			// -AcMmoShotsG2: contracts, respawn, depot, own pads (600-629).
@@ -3089,6 +3106,132 @@ void UAcGameFlowSubsystem::TickMmoShots()
 		if (IConsoleVariable* Events = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.GasGiant.Events"))) Events->Set(1);
 		Finish();
 		return;
+	// MARK: -AcMmoShotsRingshadowAlign
+	// Each sweep (11:30, 16:00) twice: from the pilot's eye just inside the
+	// band's leading edge, looking between the sun and the way the edge runs
+	// on the ground, so the arc's edge on the sun and the band's edge on the
+	// land are in one frame (the shadow's edge plane holds the eye and the
+	// sun: in the picture the two lie on one line); and from straight above
+	// the region's middle, north up, mid-sweep. The clock jumps to each moment.
+	case 330:
+		if (IConsoleVariable* Events = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.GasGiant.Events"))) Events->Set(0);
+		if (Pilot->ChaseEye()) Pilot->ToggleView();
+		RaSweep = 0;
+		Advance();
+		return;
+	case 331:
+	{
+		// The sweep's two moments: the leading edge 2.5 cells past the pilot,
+		// and the band's middle over the region's middle (half way through).
+		const TOptional<FAcWorldSky>& Sky = AAcDaylight::WorldSky();
+		if (!Sky || !M || !U) return;
+		const ac::GroundRect& Bounds = M->simulation().map->bounds;
+		ac::Ringshadow::Sweep Sw = ac::Ringshadow::next(Sky->Time, Sky->DayLength);
+		while (FMath::Abs(ac::WorldClock::hourAt(Sw.start, Sky->DayLength) - ac::Ringshadow::hours[RaSweep]) > 0.01)
+			Sw = ac::Ringshadow::next(Sw.end, Sky->DayLength);
+		double Eye = -1;
+		for (double Tm = Sw.start; Tm < Sw.end && Eye < 0; Tm += 0.02)
+		{
+			const std::optional<ac::Ringshadow::Band> B = ac::Ringshadow::band(Tm, Bounds, Sky->DayLength);
+			if (B && B->lead - ac::dot(U->position, B->dir) >= 2.5) Eye = Tm;
+		}
+		const double Top = 0.5 * (Sw.start + Sw.end);
+		Check(Eye > 0, TEXT("ra: the band's edge reaches the pilot"));
+		if (Eye < 0)
+		{
+			Finish();
+			return;
+		}
+		RaAt[0] = FMath::Min(Eye, Top);
+		RaAt[1] = FMath::Max(Eye, Top);
+		RaTop[0] = Top < Eye;
+		RaTop[1] = !RaTop[0];
+		RaStep = 0;
+		Advance();
+		return;
+	}
+	case 332:
+	{
+		const TOptional<FAcWorldSky>& Sky = AAcDaylight::WorldSky();
+		if (!Sky || !Mmo) return;
+		if (RaAt[RaStep] - 2.0 > Sky->Time + 0.5) Mmo->DevClock(FString::Printf(TEXT("clock %.2f"), RaAt[RaStep] - 2.0));
+		Advance();
+		return;
+	}
+	case 333:
+	{
+		const TOptional<FAcWorldSky>& Sky = AAcDaylight::WorldSky();
+		APlayerController* Pc = GetWorld()->GetFirstPlayerController();
+		if (!Sky || !M || !U || !Pc) return;
+		const ac::GroundRect& Bounds = M->simulation().map->bounds;
+		const FString Hhmm = RaSweep == 0 ? TEXT("1130") : TEXT("1600");
+		if (RaTop[RaStep])
+		{
+			if (!RaCam.IsValid())
+			{
+				FActorSpawnParameters Params;
+				Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+				RaCam = GetWorld()->SpawnActor<ACameraActor>(Params);
+				RaCam->GetCameraComponent()->SetConstraintAspectRatio(false);
+				RaCam->GetCameraComponent()->SetFieldOfView(70.f);
+			}
+			const ac::Vec2 Mid(0.5 * (Bounds.minX + Bounds.maxX), 0.5 * (Bounds.minZ + Bounds.maxZ));
+			// Straight down, north (-Y) at the top of the picture.
+			RaCam->SetActorLocationAndRotation(AcSpace::ToWorld(Mid, 130), FRotator(-90.f, -90.f, 0.f));
+			if (Pc->GetViewTarget() != RaCam.Get()) Pc->SetViewTarget(RaCam.Get());
+		}
+		else
+		{
+			if (Pc->GetViewTarget() != Pilot) Pc->SetViewTarget(Pilot);
+			const std::optional<ac::Ringshadow::Band> B = ac::Ringshadow::band(Sky->Time, Bounds, Sky->DayLength);
+			const FVector Sun = AAcDaylight::SunToward(AAcDaylight::HourAt(Sky->Time));
+			if (B)
+			{
+				// Between the sun and the edge's line on the ground (its sun side).
+				const FVector2D SunH = FVector2D(Sun.X, Sun.Y).GetSafeNormal();
+				FVector2D E(-B->dir.y, B->dir.x);
+				if (FVector2D::DotProduct(E, SunH) < 0) E = -E;
+				const FVector2D Look = (SunH + E).GetSafeNormal();
+				Stop(std::atan2(Look.Y, Look.X));
+				int32 VX = 0, VY = 0;
+				Pc->GetViewportSize(VX, VY);
+				const double HalfH = FMath::DegreesToRadians(0.5 * (Pc->PlayerCameraManager ? Pc->PlayerCameraManager->GetFOVAngle() : 90.f));
+				const double HalfV = VX > 0 ? std::atan(std::tan(HalfH) * VY / VX) : 0.5;
+				// The sun a little under the top of the picture.
+				Pilot->Eye().Pitch = FMath::Clamp(std::asin(Sun.Z) - (HalfV - 0.12), -0.3, 0.9);
+			}
+		}
+		if (Sky->Time >= RaAt[RaStep] && Since() > 1.0)
+		{
+			const std::optional<ac::Ringshadow::Band> B = ac::Ringshadow::band(Sky->Time, Bounds, Sky->DayLength);
+			const double Bearing = B ? FMath::Fmod(FMath::RadiansToDegrees(std::atan2(B->dir.x, -B->dir.y)) + 360.0, 360.0) : -1;
+			if (RaTop[RaStep])
+				ShootClean(*FString::Printf(TEXT("ra-%s-top"), *Hhmm),
+					FString::Printf(TEXT("%s: the band from above, north up, moving toward %.1f°"), *Hhmm, Bearing));
+			else
+				Shoot(*FString::Printf(TEXT("ra-%s-eye"), *Hhmm),
+					FString::Printf(TEXT("%s: the pilot's eye %.1f cells inside the band's leading edge, the arc on the sun (band toward %.1f°)"),
+						*Hhmm, B ? B->lead - ac::dot(U->position, B->dir) : -1.0, Bearing));
+			return;
+		}
+		TimedOut(TEXT("ra: the moment"), 30);
+		return;
+	}
+	case 334:
+		RaStep += 1;
+		if (RaStep < 2) T.Phase = 332;
+		else if (++RaSweep < 2) T.Phase = 331;
+		else T.Phase = 335;
+		T.PhaseAt = Now;
+		return;
+	case 335:
+	{
+		if (APlayerController* Pc = GetWorld()->GetFirstPlayerController(); Pc && Pc->GetViewTarget() != Pilot) Pc->SetViewTarget(Pilot);
+		Check(Shots.Saved + Shots.Skipped == 4, FString::Printf(TEXT("%d pictures (%d passed over) in %s"), Shots.Saved, Shots.Skipped, *Shots.Dir));
+		if (IConsoleVariable* Events = IConsoleManager::Get().FindConsoleVariable(TEXT("ac.GasGiant.Events"))) Events->Set(1);
+		Finish();
+		return;
+	}
 	// MARK: -AcMmoShotsF2 (and -AcMmoShotsFlight)
 	// The Dropship from a Landing Pad by the start pad to one in Cold Fork,
 	// its moments on the flight's clock; the frame times through it.
