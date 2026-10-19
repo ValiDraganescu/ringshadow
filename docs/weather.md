@@ -95,9 +95,9 @@ set each frame by `AAcDaylight::Update` from the same `ac::WeatherSample`:
   bolt and the clouds' glow share one flicker (`ac::Weather::flicker`).
 - **Wet hulls** (`MPC_AcWorld.Wetness`, read by `M_Hull`): buildings and
   units darker and glossier as the ground soaks, their top faces most.
-- **Rain on the glass** (`M_AcLensRain`, a post-process): driving a unit
-  in first person in the rain, drops bead up on the glass, refract the
-  view, the big ones slide down; more of them in heavier rain.
+- **Rain on the visor and the wipers**: beads, rivulets and running
+  sheets on the glass in first person, cleared by an automatic wiper; the
+  next section.
 - **Sound** (`Tools/AudioGen/weather.manifest.json`, ElevenLabs sound
   effects, in `unreal/Resources/Sounds/sfx/`): `rain` and `downpour` beds
   (seamless loops, two layers each like the wind), crossfaded on the rain
@@ -141,11 +141,14 @@ the camera). The materials share one test (`shelter_hlsl`).
    draw call stays one. Inside the hall no rain falls; from outside
    through the open door it stops at the doorway; it still falls on the
    roof and past the walls.
-2. **No drops on the visor** (`M_AcLensRain`'s `LensRain`): while the
-   driven unit is sheltered (the unit, not the camera) the rate eases to 0
-   in 1.5 s, and back up to the rain's in 0.5 s when it steps out
-   (`AcShelter::EaseLens`, tested in `Autocraft.Weather.Shelter.Lens`).
-   At a corner gun the glass is the feed camera's, outdoors: it stays wet.
+2. **No rain on the visor** (`M_AcLensRain`'s `LensRain`): while the
+   driven unit is sheltered (the unit, not the camera) the rate fed to the
+   glass eases to 0 in 1.5 s, and back up to the rain's in 0.5 s when it
+   steps out (`AcShelter::EaseLens`, tested in
+   `Autocraft.Weather.Shelter.Lens`). No more water lands; the wiper does
+   its last two sweeps and parks (the next section), leaving only the top
+   corners wet. At a corner gun the glass is the feed camera's, outdoors:
+   it stays in the rain.
 3. **Dry floor and walls** (`M_Hull`, `M_Terrain`): a pixel inside a box
    takes no wetness (and on the ground no puddles or rings): the hall's
    floor, inner walls and consoles stay dry while the same building's
@@ -161,6 +164,110 @@ flow checks the lens and the collection's first box in the hall, and with
 `-AcMmoShotsRain` takes the pictures (`art/models/citadel/c3-rain/`).
 `ac.Weather.Shelter 0` (or `-AcNoShelter`) turns it all off, for
 comparison shots.
+
+## Rain on the visor and the wipers
+
+Driving in first person in the rain, and at a Citadel gun's live feed (the
+feed camera's housing has the same wiper), the water on the glass is the
+history of the rain and the wipes since the blade last passed. Not in the
+chase view or the top-down view. Light rain leaves a few beads; rain (0.5)
+half covers the glass in about 8 s; a storm (1.0) runs in sheets within
+seconds. The wiper clears it, the glass shows clear for a moment behind
+the blade, and the drops pile up again until the next sweep.
+
+**The glass** (`M_AcLensRain`, a post-process after depth of field, from
+`Tools/Editor/make_weather_materials.py`):
+
+- *Beads* of three sizes, each a little lens that shows the scene through
+  it small and upside down, with a dark rim and a sky highlight. Each cell
+  of the glass lands its bead when enough water has come since the blade
+  passed it, and the bead grows as more lands; at the end of its life a
+  heavy one slides off and a new one lands.
+- *Rivulets*: now and then a heavy drop lets go and runs down,
+  meandering, stopping and starting, leaving a thin wet track that
+  narrows as it ages and keeps only small beads; tracks that cross merge
+  (a smooth union). More of them the harder it rains; a storm's are wide
+  streams.
+- *Sheets* in heavy rain (from a rate of 0.55): a film of water running
+  down the glass that smears the view (three taps along the flow).
+- *The wind* across the view (the weather's wind against the camera's
+  right, eased over a second) shears the running water sideways.
+- *Lightning*: the highlights glitter with the flash (`ac::Weather::flicker`).
+- *The blade*: one blade on a pivot below the view's bottom centre, a dark
+  silhouette with a lighter rubber lip, a soft shadow on the glass. It
+  pushes a bright ridge of water ahead of its leading edge, wider the more
+  water it has gathered; behind it the glass is clear but for a thin smear
+  that dries in 0.4 s. The arc covers all but the top corners, which stay
+  wet (and dry slowly when the rain has stopped).
+
+*The technique* is procedural, not a simulated water texture: every drop
+and rivulet has a birth on the glass's clock, and a last-wipe field (when
+the blade last crossed each spot, and how much water has landed there
+since) hides whatever came before the blade passed. The field is exact:
+the blade's angle is a known function of time (`ac::Wipers::sweepAngle`),
+so the material solves, for each pixel, when the latest sweep or the one
+before it crossed it, and reads the water landed since from the dried
+water totals the rule kept at those sweeps' start and end. Chosen over a
+render-target simulation (a height texture ping-ponged each frame)
+because it costs one post-process pass and no extra draw, it does not
+depend on the frame rate or blur into a grid at the screen's resolution,
+nothing is lost when the view size changes or the glass is out of sight,
+and the field is the same rule the core tests check. What it gives up:
+drops do not really collide; merging is drawn, not simulated.
+
+**The wiper** (`ac::Wipers`, `unreal/Source/AutocraftCore/Public/Wipers.h`,
+tested in `core-tests/tests/WipersTests.cpp`): automatic on the rain fed
+to the glass (0 when the driven unit is sheltered).
+
+| What | Value (named constants in `ac::Wipers`) |
+|---|---|
+| Off | rain under 0.15 (`IntermittentFrom`) |
+| Intermittent (INT) | under 0.45 (`SteadyFrom`): a sweep every 5 s (`IntermittentEvery`) |
+| Steady (ON) | under 0.8 (`FastFrom`): every 1.8 s (`SteadyEvery`) |
+| Fast (FAST) | from 0.8: continuous |
+| A sweep | out from the park (lying flat on the left, out of sight) over the top to the right and back, eased like a crank: 0.7 s each way (`SlowEach`), 0.4 s at fast (`FastEach`), so fast is 0.8 s out and back |
+| Water on the glass | rate × seconds, each second weighted by `1 + 2 rate²` (`HeavyLands`: a storm lands three times its rate), drying with a 180 s time constant (`DrySeconds`) |
+| Coverage | `1 - exp(-water / 8.66)` (`CoverWater`): half at 6, rain at 0.5 for 8 s or a storm for 2 s |
+| Early sweep | when the middle of the glass is half covered (`SweepEarlyAt`), in any mode: a drizzle under 0.15 gets a sweep about once a minute |
+| When it stops | the rain fed falls under 0.15 (it stops, or the unit goes indoors): two last sweeps back to back (`FinalSweeps`), then the park; rain coming back cancels them |
+| Smear | dries in 0.4 s (`SmearSeconds`) |
+
+The blade's pivot sits 1.06 view heights down from the top (just under the
+bottom edge), its reach 1.12 view heights, its half width 0.0085
+(`AcVisor.h`). `ac.Wipers 0` holds the blade parked (the water keeps
+landing; for comparing pictures), as does `-AcWipersOff`.
+
+**The parameters** (`AcVisor::Params`, `unreal/Source/Autocraft/AcVisor.cpp`,
+tested in `Autocraft.Weather.Visor`; set by `AAcWeather::UpdateLens` each
+frame; the post-process is off when the glass is out of view or dry):
+`LensRain` the rain rate fed; `GlassA`/`GlassB` the latest sweep and the one
+before (seconds since it began, seconds each way, water landed since it
+began and since it ended); `GlassSeed` (the sweeps' numbers, the water on a
+spot never wiped); `GlassArc` (pivot, reach, park and far angles);
+`GlassBlade` (angle, way: 1 out, -1 back, 0 parked; smear seconds; half
+width); `GlassHist` (water landed in the last 0.5, 1, 2, 4 s: how hard it
+rained when a rivulet was born); `GlassAir` (wind across the view, flash,
+daylight, the glass's clock, wrapped every 4096 s). The material's own
+numbers (bead sizes, the rivulets' lanes and speeds, the sheets' flow) are
+at the top of each block of `LENS_HLSL`.
+
+**The sound** (`Tools/AudioGen/weather.manifest.json`, ElevenLabs sound
+effects cut to 0.75 s with `trim.py`, in `unreal/Resources/Sounds/sfx/`):
+`wiper` (3 takes) a pass of rubber over wet glass, `wiperdry` (2) the
+squeak of a pass over a glass with no rain on it and none landed in the
+last second (the last sweep when the rain stops). One sound a pass, out
+and back, in your ear, only while the glass is in view
+(`FAcAudioRules::Wipers`, tested in `Autocraft.Audio.Rules.Wipers`). At
+gain 0.3 a pass's loudest 100 ms sit about 5 dB over the downpour bed and
+under a minigun.
+
+**The HUD**: a small "WIPERS" plate left of the view switch on the
+dashboard, its amber lamp lit with the mode (INT, ON, FAST), unlit at OFF.
+
+**Cost**: GPU_COST_TBD.
+
+**Pictures**: `art/weather/wipers/` (the `mmovisor` flow:
+`-AcFlowTest=mmovisor -AcMmoWeather=rain|storm -AcMmoShots=DIR`).
 
 ## Ringshadow sweep
 
