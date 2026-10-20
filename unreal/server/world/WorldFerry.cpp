@@ -20,10 +20,13 @@ std::optional<int64_t> WorldMap::devLandingPad(size_t r, Vec2 near, std::optiona
     GameState& st = sim.state;
     const double radius = Rules::radius(StructureKind::landingPad);
     // On open ground at `near` (ahead along `heading`, or round it), clear of
-    // the buildings and the region's pad plates.
-    for (double d = 0; d <= 14; d += 1)
-        for (int k = 0; k < (d == 0 ? 1 : 12); k++) {
-            const double a = heading ? *heading + (k % 2 ? 1 : -1) * 0.35 * double((k + 1) / 2) : k * 2 * pi / 12;
+    // the buildings and the region's pad plates: out to a pad and a plate
+    // across (C5's 17 x 17 pads), more turns the farther out.
+    const double out = 14 + 2 * radius;
+    for (double d = 0; d <= out; d += 1)
+        for (int k = 0; k < (d == 0 ? 1 : 12 + int(d)); k++) {
+            const int n = 12 + int(d);
+            const double a = heading ? *heading + (k % 2 ? 1 : -1) * 0.35 * double((k + 1) / 2) * 12.0 / n : k * 2 * pi / n;
             const Vec2 spot = sim.snap(StructureKind::landingPad, near + Vec2(std::cos(a), std::sin(a)) * d).value_or(near);
             if (sim.placementRefusal(StructureKind::landingPad, spot)) continue;
             if (region::touchesPadPlate(world_->regions[r].built.pads, spot, radius)) continue;

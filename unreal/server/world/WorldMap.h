@@ -2003,9 +2003,9 @@ private:
     std::vector<size_t> ownPatches_;
     bool devFallDone_ = false;
 
-    /// A new unit of `kind` on the start pad, facing the start region's nearest
-    /// ore deposit (one with ore left first), so the first thing in view is
-    /// work.
+    /// A new unit of `kind` just off the start pad's plate toward the start
+    /// region's nearest ore deposit (one with ore left first), facing it, so
+    /// the first thing in view is work and a Citadel fits by the pad.
     Unit startUnit(UnitKind kind) const;
     /// The neighbour across an edge (nil: the world's border, or no region).
     std::optional<size_t> neighbour(size_t r, region::Edge e) const;

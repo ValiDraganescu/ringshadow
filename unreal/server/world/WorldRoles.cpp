@@ -113,7 +113,8 @@ std::optional<WorldMap::Home> WorldMap::home(const PilotState&, size_t region, V
         }
     }
     if (best) return best;
-    return Home{start_, world_->regions[start_].built.pads[world_->startPad].at, std::nullopt};
+    // No Citadel or Hab Dome: where a new pilot starts, off the start pad.
+    return Home{start_, startUnit(UnitKind::prospector).position, std::nullopt};
 }
 
 std::optional<net::ProgressMessage::Respawn> WorldMap::respawning(PilotId pilot) const {

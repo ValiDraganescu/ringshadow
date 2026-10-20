@@ -1589,6 +1589,15 @@ std::vector<Problem> validate(const RegionFile& given, const Built& b, std::vect
             add(where, "cut off: no open ground beside it joins the region's open ground", w);
         }
     }
+    // A pad's start apron (C5, WorldMap::startUnit): just off its plate
+    // toward the nearest deposit, where a new pilot stands at the start pad.
+    const auto startApron = [&](Vec2 c) -> std::optional<Vec2> {
+        const OreSpec* near = nullptr;
+        for (const OreSpec& d : b.map.deposits)
+            if (!near || length(d.position - c) < length(near->position - c)) near = &d;
+        if (!near || length(near->position - c) < 1e-9) return std::nullopt;
+        return c + (near->position - c) / length(near->position - c) * (padReach + 1.5);
+    };
     // Pads: flat, clear, joined to the open ground.
     for (size_t i = 0; i < b.pads.size(); i++) {
         const std::string where = "pads[" + std::to_string(i) + "] \"" + b.pads[i].name + "\"";
@@ -1620,6 +1629,10 @@ std::vector<Problem> validate(const RegionFile& given, const Built& b, std::vect
             add(where, rockText(*r), c);
         } else if (const auto ra = rock(apron, padApronHalf)) {
             add(where, "its ramp's apron (+y) " + rockText(*ra), apron);
+        } else if (const auto st = startApron(c); st && (steepNear(*st) || rock(*st, 1.0))) {
+            add(where, "its start apron (just off the plate toward the nearest ore, where a new pilot stands) is " +
+                           std::string(steepNear(*st) ? "on a cliff face" : rockText(*rock(*st, 1.0))),
+                *st);
         } else if (const auto k = crowded(c, "", padRadius + 1.5, padRadius + 2)) {
             add(where, *k, c);
         } else {

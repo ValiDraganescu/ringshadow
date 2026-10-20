@@ -474,7 +474,11 @@ Unit WorldMap::startUnit(UnitKind kind) const {
     }
     const Vec2 to = near ? near->position - at : Vec2(1, 0);
     const double heading = length(to) > 1e-9 ? std::atan2(to.y, to.x) : 0;
-    return start().simulation().freshUnit(kind, 0, Pilot::player, at, heading);
+    // C5: just off the pad's plate toward that ore (the Landing Pad is
+    // 17 x 17 under the walk-in Dropship), so a Citadel fits by the pad
+    // from where it stands; `arrive` steps it onto open ground nearby.
+    const Vec2 off = at + Vec2(std::cos(heading), std::sin(heading)) * (region::padReach + 1.5);
+    return start().simulation().freshUnit(kind, 0, Pilot::player, off, heading);
 }
 
 bool WorldMap::join(PilotId pilot) {

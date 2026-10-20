@@ -260,3 +260,36 @@ TEST(shuttle_dev_ferry_mule_drives_up_the_ramp) {
     EXPECT_TRUE(Act::gap(*drivenBy(w, a), Act::rampPost(*nearestShip(w, a))) <= Act::serverReach);
     EXPECT_TRUE(!w.shuttleRamp(a, false));
 }
+
+/// C5: the Landing Pad is 17 x 17 under the walk-in Dropship, so a new pilot
+/// starts just off the start pad's plate, toward the nearest ore and facing
+/// it; from there the tutorial's first Citadel "by the pad" fits within
+/// build reach, off the plate.
+TEST(shuttle_new_pilot_starts_off_the_pad_and_builds_its_citadel_by_it) {
+    WorldParams p = params();
+    p.startOre = 1000;
+    p.devBlueprints = true;
+    WorldMap w(first(), p);
+    ASSERT_TRUE(w.seat(a, keyA) == WorldMap::Seated::fresh);
+    w.step();
+    Simulation& sim = w.regionOf(a)->simulation();
+    const Unit u = *drivenBy(w, a);
+    const auto& pads = first().regions[first().start].built.pads;
+    const Vec2 pad = pads[first().startPad].at;
+    std::printf("  new pilot %.1f cells from the start pad's middle\n", distance(u.position, pad));
+    EXPECT_TRUE(distance(u.position, pad) > region::padReach && distance(u.position, pad) < region::padReach + 6);
+    std::optional<Vec2> spot;
+    const double reach = Region::buildReach(StructureKind::citadel);
+    for (double d = reach; d <= reach + Region::buildSlack && !spot; d += 0.5)
+        for (int k = 0; k < 32 && !spot; k++) {
+            const double h = k * 2 * pi / 32;
+            const auto s = sim.snap(StructureKind::citadel, u.position + Vec2(std::cos(h), std::sin(h)) * d);
+            if (s && distance(*s, u.position) <= reach + Region::buildSlack && !sim.placementRefusal(StructureKind::citadel, *s) &&
+                !region::touchesPadPlate(pads, *s, Rules::radius(StructureKind::citadel)))
+                spot = s;
+        }
+    ASSERT_TRUE(spot.has_value());
+    const auto why = w.build(a, StructureKind::citadel, *spot);
+    if (why) std::printf("  refused: %s\n", why->c_str());
+    EXPECT_TRUE(!why.has_value());
+}
