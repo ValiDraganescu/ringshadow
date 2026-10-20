@@ -383,3 +383,24 @@ TEST(mule_drivesUpTheRampIntoTheBay) {
     unitOf(sim, m).position = ShuttleBay::world(ship, Vec2(ShuttleBay::rear + Mule::length / 2 - 0.3, 0));
     EXPECT_EQ(sim.rampRefusal(ship, unitOf(sim, m), false).value_or(""), std::string("Someone is on the ramp"));
 }
+
+TEST(pilot_walksPastAParkedMuleInTheBay) {
+    // C5 with solid bodies (c5-solid): the bay is 4 wide, so a pilot on
+    // foot passes a Mule parked on the bay's axis, beside it, the whole
+    // bay's length; and a second Mule fits side by side.
+    Bay b = bayScene(kPad + Vec2(ShuttleBay::rear + 0.6, 1.5), 0);
+    const int64_t m = b.sim.state.nextID++;
+    b.sim.state.units.push_back(Unit(m, Unit::Kind::mule, 0, kPad + Vec2(-1.0, 0), 0, Unit::Task::idle));
+    b.sim.state.units.back().hp = Rules::stats(Unit::Kind::mule).hp;
+    b.sim.reindex();
+    walk(b, 0, 4);
+    const Vec2 l = localOf(b, b.pilot);
+    EXPECT_TRUE(ShuttleBay::inBay(l) && l.x > 1.0);
+    // Two side by side: the first moved over to one wall, the second fits
+    // between it and the other, inside the bay's walls.
+    unitOf(b.sim, m).position = ShuttleBay::world(*b.sim.shuttle(b.ship), Vec2(-1.0, 0.9));
+    const Vec2 beside = ShuttleBay::world(*b.sim.shuttle(b.ship), Vec2(-1.0, -0.9));
+    Unit second(b.sim.state.nextID++, Unit::Kind::mule, 0, beside, 0, Unit::Task::idle);
+    EXPECT_TRUE(ShuttleBay::inBay(ShuttleBay::local(*b.sim.shuttle(b.ship), beside), Mule::width / 2));
+    EXPECT_TRUE(b.sim.pilotCanStand(second, beside));
+}
