@@ -211,7 +211,10 @@ void WorldMap::devRig(PilotId pilot) {
                 if (Unit* u = driven()) {
                     Vec2 out = u->position - b.position;
                     out = length(out) > 1e-6 ? normalize(out) : Vec2(1, 0);
-                    u->position = b.position + out * (Rules::radius(b.kind) + 0.5);
+                    // Half a cell off its square's edge that way (C5: off a
+                    // diagonal, r + 0.5 along it lands inside the square).
+                    const double edge = std::max(std::abs(out.x), std::abs(out.y));
+                    u->position = b.position + out * ((Rules::radius(b.kind) + 0.5) / edge);
                 }
     // The rig: marks researched, modules in the stores and fitted, a job at each.
     Rig& rig = p->progress.rig;

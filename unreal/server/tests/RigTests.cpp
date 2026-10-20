@@ -471,7 +471,9 @@ TEST(rig_dev_flag_gives_a_home_and_a_stocked_rig) {
             const double d = distance(b.position, at);
             if (b.kind == StructureKind::citadel) {
                 citadel = d;
-                EXPECT_NEAR(d - Rules::radius(b.kind), 0.5, 0.75);
+                // Outside its square, by about half a cell.
+                const double gap = std::max(std::abs(at.x - b.position.x), std::abs(at.y - b.position.y)) - Rules::radius(b.kind);
+                EXPECT_TRUE(gap > 0.25 && gap < 1.25);
             }
             if (b.kind == StructureKind::foundry) foundry = d;
             if (b.kind == StructureKind::lab) lab = d;
