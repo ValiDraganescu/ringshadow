@@ -225,6 +225,10 @@ it turned a quarter at a time. Its touch down pushes whoever stands under
 the hull out by the nearest side that stays on the region's ground. Aboard,
 the flight menu's pad is the one the ship stands on (`NearestPad` measures
 from the hull's middle: the console stands 4.7 cells off the pad's middle).
+With the pads this big a new pilot starts just off the start pad's plate,
+toward the nearest ore (the manager's ruling, docs/worlds.md), and the dev
+line `ferry pad` looks for room out to a pad and a plate across, first
+where the ramp and a Mule behind it stay inside the region.
 
 **The pose** (`shuttlePose`, Shuttle.h): F2's path, moved from the client
 into the core: down onto the pad from high behind it, on the pad, up off it,

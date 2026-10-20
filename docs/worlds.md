@@ -47,8 +47,10 @@ Any problem stops the server (exit 2, the problems on stderr):
 
 - Every region is wild ground: the map's ore and wells, no bases, no AI, one
   player (the pilots' side). Every region steps every tick.
-- A new pilot appears on the start pad driving a new Prospector, with a
-  wallet of 600 ore and 0 MH. The wallet is its side's bank in the region it
+- A new pilot appears by the start pad driving a new Prospector (C5: just
+  off the 17 x 17 pad's plate toward the nearest ore, facing it, so the
+  first Citadel fits by the pad; `WorldMap::startUnit`, the region
+  validator keeps that spot clear), with a wallet of 600 ore and 0 MH. The wallet is its side's bank in the region it
   is in (the snapshot's `players[0]`), and goes with it, as do its levels.
 - Edges (W4, seamless): in a region with open edges a unit walks up to an
   opening's edge and up to a cell past it. The driven unit crosses once its
