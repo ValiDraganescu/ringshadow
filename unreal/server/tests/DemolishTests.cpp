@@ -259,7 +259,13 @@ TEST(demolish_keeps_the_last_citadel_and_one_with_someone_in_it) {
     EXPECT_EQ(w.demolish(me, *home), std::optional<std::string>("The realm's last Citadel stays: a home must remain"));
     goTo(w, me, "cold-fork");
     fill(w, me, 5000, 500);
-    const auto second = put(w, me, StructureKind::citadel);
+    // Off the pad's plate (C5's 17 x 17 pads), on a side with room for it.
+    std::optional<int64_t> second;
+    const Vec2 fork = drivenUnit(w, me)->position;
+    for (int k = 0; k < 8 && !second; k++) {
+        moveTo(w, me, fork + Vec2(std::cos(k * pi / 4), std::sin(k * pi / 4)) * (region::padReach + 2));
+        second = put(w, me, StructureKind::citadel);
+    }
     ASSERT_TRUE(second.has_value());
     const Structure c2 = *simOf(w, me).state.structure(*second);
     // In its hall: refused.

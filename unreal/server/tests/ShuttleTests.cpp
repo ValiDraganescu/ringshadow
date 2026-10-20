@@ -58,7 +58,9 @@ Vec2 rig(WorldMap& w) {
     w.step();
     const size_t fork = *w.regionNamed("cold-fork");
     const Vec2 pad = first().regions[first().start].built.pads[first().startPad].at;
-    EXPECT_TRUE(w.devLandingPad(first().start, pad + Vec2(0, 10)).has_value());
+    // South of the start pad: room in front (+y) for the ramp and a Mule
+    // behind it, inside the region (C5's 17 x 17 pads).
+    EXPECT_TRUE(w.devLandingPad(first().start, pad + Vec2(0, -20)).has_value());
     EXPECT_TRUE(w.devLandingPad(fork, first().regions[fork].built.pads[0].at + Vec2(0, 10)).has_value());
     Vec2 here{0, 0}, there{0, 0};
     for (const LandingPad& o : w.landingPads()) (o.region == fork ? there : here) = o.at;

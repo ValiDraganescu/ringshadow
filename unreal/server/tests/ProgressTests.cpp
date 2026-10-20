@@ -320,9 +320,12 @@ TEST(progress_respec_at_the_citadel_for_mh) {
     EXPECT_EQ(w.start().simulation().state.players[0].hydrogen, int64_t(60));
     EXPECT_TRUE(w.progress(me)->ranks.empty());
     EXPECT_EQ(w.progress(me)->unspent(), int64_t(9));
-    // Another pilot's Citadel is not home.
+    // Another pilot's Citadel is not home (on the start pad, away from it:
+    // a new pilot starts by the pad where the first built, C5).
     w.join(other);
     w.setProgress(other, at(10));
+    drivenUnit(w, other)->position = first().regions[first().start].built.pads[first().startPad].at;
+    w.step();
     ASSERT_TRUE(!w.spend(other, Skill::quickDrill));
     EXPECT_TRUE(w.respec(other).value_or("").rfind("Respec at your Citadel", 0) == 0);
 }

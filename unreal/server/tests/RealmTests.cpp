@@ -182,6 +182,9 @@ TEST(realm_second_pilot_uses_the_first_pilots_hab_dome_and_citadel) {
 
     // A's Hab Dome takes no load (C4; this passed before C5 only because
     // the small dome stood within the Citadel's unload reach).
+    // (Beside the dome on its side away from the Citadel: B starts by the
+    // pad, toward them, C5.)
+    drivenUnit(w, b)->position = dome.position + normalize(dome.position - citadel.position) * (Rules::radius(dome.kind) + 3);
     besides(w, b, dome);
     drivenUnit(w, b)->carrying = 25;
     drivenUnit(w, b)->hydrogen = false;
@@ -228,7 +231,8 @@ TEST(realm_building_finished_is_told_to_every_pilot) {
     fill(w, a, 3000, 500);
     (void)w.takeNews(a);
     (void)w.takeNews(b);
-    const auto dome = weld(w, a, StructureKind::habDome, w.regionOf(a)->places()->ground(Vec2(72, 48)));
+    const Vec2 east = w.regionOf(a)->places()->ground(Vec2(72, 48));
+    const auto dome = weld(w, a, StructureKind::habDome, rig::standFor(w, a, StructureKind::habDome, east + Vec2(0, 9)));
     ASSERT_TRUE(dome.has_value());
     auto built = [&](PilotId p) {
         std::vector<net::ProgressMessage::News> out;

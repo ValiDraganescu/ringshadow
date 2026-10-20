@@ -479,24 +479,24 @@ TEST(e2e_save_kill_9_mid_play_loses_at_most_5_s) {
     hc.connect(clockNow());
     hc.join(key);
     ASSERT_TRUE(c.until([&] { return hc.mirror() && hc.mirror()->driven() && hc.mirror()->unit(*hc.mirror()->driven()); }, 10));
-    // Off the pad east onto open ground, then a Citadel ahead, whichever way fits.
-    hc.steer.heading = 0;
-    hc.steer.walk = Vec2(1, 0);
-    // (C1: farther, for the 12x12 Citadel to clear the pad's plate.)
-    c.until([] { return false; }, 3.5);
-    hc.steer.walk = Vec2(0, 0);
+    // A Citadel ahead from where it starts (C5: a new pilot starts just
+    // off the pad's plate, room for one by it), whichever way fits.
     c.until([] { return false; }, 0.5);
     bool built = false;
-    for (int k = 0; k < 8 && !built; k++) {
-        hc.steer.heading = k * 6.283185307179586 / 8;
+    for (int k = 0; k < 16 && !built; k++) {
+        hc.steer.heading = k * 6.283185307179586 / 16;
         c.until([] { return false; }, 0.4);
-        const Unit& u = *hc.mirror()->unit(*hc.mirror()->driven());
-        const Vec2 ahead(std::cos(u.heading), std::sin(u.heading));
-        const auto at = hc.mirror()->simulation().snap(StructureKind::citadel, u.position + ahead * Region::buildReach(StructureKind::citadel));
-        if (!at) continue;
-        const uint32_t req = hc.build(StructureKind::citadel, *at);
-        ASSERT_TRUE(c.until([&] { return hc.replies.count(req) > 0; }, 3));
-        built = hc.replies[req].done;
+        // Out to the build's slack ahead (the unit moves on as it is asked).
+        for (double more = 0; more <= Region::buildSlack - 0.5 && !built; more += 1) {
+            const Unit& u = *hc.mirror()->unit(*hc.mirror()->driven());
+            const Vec2 ahead(std::cos(u.heading), std::sin(u.heading));
+            const auto at = hc.mirror()->simulation().snap(StructureKind::citadel,
+                                                          u.position + ahead * (Region::buildReach(StructureKind::citadel) + more));
+            if (!at) continue;
+            const uint32_t req = hc.build(StructureKind::citadel, *at);
+            ASSERT_TRUE(c.until([&] { return hc.replies.count(req) > 0; }, 3));
+            built = hc.replies[req].done;
+        }
     }
     ASSERT_TRUE(built);
     ASSERT_TRUE(c.until([&] { return citadelIn(*hc.mirror()) != nullptr; }, 3));

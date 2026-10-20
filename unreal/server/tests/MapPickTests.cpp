@@ -60,7 +60,8 @@ TEST(MapPick_padsAndSeenSurviveASaveAndAFrontierPad) {
     ASSERT_TRUE(b != nullptr);
     b->arrived = true;
     b->region = start;
-    b->at = w.region(start).places()->ground(Vec2(96, 60));
+    // South of the start pad, where a 17 x 17 Landing Pad has room (C5).
+    b->at = w.region(start).places()->ground(Vec2(76, 26));
     std::printf("  %s\n", w.devFrontier("frontier build landingPad").c_str());
     for (int i = 0; i < 180; i++) w.step();
     // Saved and loaded, the pilot back on line.

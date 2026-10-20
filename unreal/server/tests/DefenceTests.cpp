@@ -139,7 +139,10 @@ struct Home {
         w.setProgress(a, at(10));
         fill(w, a, 3000, 500);
         east = w.regionOf(a)->places()->ground(Vec2(72, 48));
-        citadel = weld(w, a, StructureKind::citadel, rig::citadelStand(w, a, east));
+        // North of the start pad's plate (C5's 17 x 17 pads), clear of the
+        // west ore: a Citadel by its corner would be 'grown over' a mound on
+        // a reload (WorldMap::adoptCitadels) and the save would change.
+        citadel = weld(w, a, StructureKind::citadel, rig::citadelStand(w, a, east + Vec2(4, 16)));
     }
     WorldMap w;
     Vec2 east;

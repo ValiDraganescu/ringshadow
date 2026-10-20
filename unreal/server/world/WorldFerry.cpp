@@ -21,21 +21,26 @@ std::optional<int64_t> WorldMap::devLandingPad(size_t r, Vec2 near, std::optiona
     const double radius = Rules::radius(StructureKind::landingPad);
     // On open ground at `near` (ahead along `heading`, or round it), clear of
     // the buildings and the region's pad plates: out to a pad and a plate
-    // across (C5's 17 x 17 pads), more turns the farther out.
+    // across (C5's 17 x 17 pads), more turns the farther out. First where
+    // there is room in front (+y) inside the region for the Dropship's ramp
+    // and a Mule behind it (`ferry mule`), else anywhere.
     const double out = 14 + 2 * radius;
-    for (double d = 0; d <= out; d += 1)
-        for (int k = 0; k < (d == 0 ? 1 : 12 + int(d)); k++) {
-            const int n = 12 + int(d);
-            const double a = heading ? *heading + (k % 2 ? 1 : -1) * 0.35 * double((k + 1) / 2) * 12.0 / n : k * 2 * pi / n;
-            const Vec2 spot = sim.snap(StructureKind::landingPad, near + Vec2(std::cos(a), std::sin(a)) * d).value_or(near);
-            if (sim.placementRefusal(StructureKind::landingPad, spot)) continue;
-            if (region::touchesPadPlate(world_->regions[r].built.pads, spot, radius)) continue;
-            st.structures.push_back(Structure(st.nextID++, StructureKind::landingPad, Pilot::player, spot));
-            st.structures.back().hp = Rules::hp(StructureKind::landingPad);
-            sim.reindex();
-            sim.refreshNav();
-            return st.structures.back().id;
-        }
+    for (const bool roomy : {true, false})
+        for (double d = 0; d <= out; d += 1)
+            for (int k = 0; k < (d == 0 ? 1 : 12 + int(d)); k++) {
+                const int n = 12 + int(d);
+                const double a = heading ? *heading + (k % 2 ? 1 : -1) * 0.35 * double((k + 1) / 2) * 12.0 / n : k * 2 * pi / n;
+                const Vec2 spot = sim.snap(StructureKind::landingPad, near + Vec2(std::cos(a), std::sin(a)) * d).value_or(near);
+                // The cheap tests first: the placement's is the slow one.
+                if (roomy && sim.map && spot.y + radius + 7 > sim.map->bounds.maxZ - 1) continue;
+                if (region::touchesPadPlate(world_->regions[r].built.pads, spot, radius)) continue;
+                if (sim.placementRefusal(StructureKind::landingPad, spot)) continue;
+                st.structures.push_back(Structure(st.nextID++, StructureKind::landingPad, Pilot::player, spot));
+                st.structures.back().hp = Rules::hp(StructureKind::landingPad);
+                sim.reindex();
+                sim.refreshNav();
+                return st.structures.back().id;
+            }
     return std::nullopt;
 }
 
