@@ -344,8 +344,12 @@ void UAcGameFlowSubsystem::TickMmoMuleFlow(const FString& Step)
 		}
 		if (!MuleFlow.bPressed)
 		{
+			// Beside the perch on the side the pilot stands (from the hopper
+			// it walks along the Mule's flank, never across its body).
 			const ac::Vec2 Perch = ac::Mule::perch(*Mule);
-			if (WalkTo(ac::Mule::point(*Mule, ac::Vec2(ac::Mule::perchLocal.x, -1.4)), 0.6, Perch)) Pilot->TestLookAtAct(AcActPick::EKind::Board, Mule->id);
+			const ac::Vec2 Across = ac::Mule::point(*Mule, ac::Vec2(0, 1)) - Mule->position;
+			const double Lateral = ac::dot(U->position - Mule->position, Across) >= 0 ? 1.4 : -1.4;
+			if (WalkTo(ac::Mule::point(*Mule, ac::Vec2(ac::Mule::perchLocal.x, Lateral)), 0.6, Perch)) Pilot->TestLookAtAct(AcActPick::EKind::Board, Mule->id);
 			if (!Prompt.Contains(TEXT("CLIMB ON")))
 			{
 				Waited(FString::Printf(TEXT("mule: at the perch \"E · CLIMB ON\" (\"%s\", %.2f cells from the perch, task %d)"), *Prompt,
