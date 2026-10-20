@@ -173,6 +173,16 @@ std::string WorldMap::devCitadel(const std::string& line) {
                     continue;
                 const Vec2 stand = *spot + Vec2(0, half + 4);
                 if (!sim.nav || !sim.nav->walkable(stand) || sim.nav->inRock(stand)) continue;
+                // C5: open ground over the door's apron too, where `mule door`
+                // stages the Mule (its centre 9.5 from the middle, 3 long, 1.6
+                // wide) and the Prospector beside its hopper and its perch.
+                bool apron = true;
+                for (double dy = half + 1; dy <= half + 6 && apron; dy += 0.5)
+                    for (double dx = -2.5; dx <= 2.5 && apron; dx += 0.5) {
+                        const Vec2 q = *spot + Vec2(dx, dy);
+                        apron = sim.nav->walkable(q) && !sim.nav->inRock(q);
+                    }
+                if (!apron) continue;
                 // The way to its door clear of buildings, a Mule's length
                 // past the stand (C5: a 7x7 Foundry put up first may stand
                 // across it).
