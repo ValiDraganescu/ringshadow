@@ -111,6 +111,9 @@ namespace
 		bool bTracers = false;
 		/// The region's buildings listed once, as the scene starts.
 		bool bListed = false;
+		/// The first id the dummy asked for along the gun's aim can have
+		/// (the twelve of the demolish step still stand).
+		int64 DummyFrom = -1;
 		bool bImpact = false;
 		/// The command line before the dev rig was added (put back after).
 		FString CommandLineWas;
@@ -667,12 +670,15 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		{
 			if (!Settle(1.0)) return;
 			Practice.bAsked = true;
+			for (const ac::Structure& B : S->state.structures) Practice.DummyFrom = FMath::Max(Practice.DummyFrom, B.id + 1);
 			Check(Mmo->DevClock(FString::Printf(TEXT("dummy here %.0f"), DummyCells)), TEXT("practice: a Target Dummy asked for along the gun's aim (dev)"));
 			return;
 		}
 		for (const ac::Structure& B : S->state.structures)
 		{
-			if (B.kind == ac::StructureKind::dummy && B.id != Practice.Built && B.complete() && B.hp > 0 && !B.downUntil)
+			// The one it asked for: newer than the ask (the demolish step's
+			// twelve still stand, one may sit behind another building).
+			if (B.kind == ac::StructureKind::dummy && B.id != Practice.Built && B.id >= Practice.DummyFrom && B.complete() && B.hp > 0 && !B.downUntil)
 			{
 				const double Dist = ac::distance(B.position, Gun);
 				if (Dist > DummyCells * 0.6 && Dist < DummyCells * 1.5) Practice.Dummy = B.id;
