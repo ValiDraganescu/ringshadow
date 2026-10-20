@@ -112,8 +112,12 @@ namespace
 		/// The region's buildings listed once, as the scene starts.
 		bool bListed = false;
 		/// The first id the dummy asked for along the gun's aim can have
-		/// (the twelve of the demolish step still stand).
+		/// (the twelve of the demolish step still stand), the spot it was
+		/// asked for, and how many asks a blocked line has taken (C5: the
+		/// grown buildings round the start may stand in the gun's way).
 		int64 DummyFrom = -1;
+		ac::Vec2 Aimed{0, 0};
+		int32 Tries = 0;
 		bool bImpact = false;
 		/// The command line before the dev rig was added (put back after).
 		FString CommandLineWas;
@@ -627,7 +631,10 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 	{
 		// A Target Dummy `DummyCells` out along the gun's aim (dev), the gun
 		// first turned where the rounds' path that far out is clear of the
-		// ground (a ledge between would take them all).
+		// ground (a ledge between would take them all). Asked again nearer
+		// or farther when the line to the one that stood was blocked.
+		static constexpr double TryCells[] = {DummyCells, 11, 19, 13, 17};
+		const double Cells = TryCells[Practice.Tries % 5];
 		const ac::Structure* C = Structure(Practice.Citadel);
 		if (!C)
 		{
@@ -645,7 +652,7 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 			for (double Off = -ac::Defence::gunArcHalf + 0.45; Off <= ac::Defence::gunArcHalf - 0.45; Off += 0.1)
 			{
 				const double Yaw = Mid + Off;
-				const ac::Vec2 Spot = Gun + ac::Vec2(std::cos(Yaw), std::sin(Yaw)) * DummyCells;
+				const ac::Vec2 Spot = Gun + ac::Vec2(std::cos(Yaw), std::sin(Yaw)) * Cells;
 				const ac::Vec3 Base(0, 0, S->groundZ(C->position));
 				const ac::Vec3 Level = ac::Defence::gunMuzzle(C->position, 0, Yaw, 0.0) + Base;
 				const std::optional<double> Pitch = ac::Rules::ballisticPitch(ac::length(Spot - ac::Vec2(Level.x, Level.y)),
@@ -662,7 +669,8 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 			}
 			// (Aimed 1.1 cells over the ground there, a clear round comes down
 			// a little past it; a ledge in the way takes it cells short.)
-			Check(BestOff < 4.0, FString::Printf(TEXT("practice: a clear line of fire %.0f cells out (%.1f cells off)"), DummyCells, BestOff));
+			Check(BestOff < 4.0, FString::Printf(TEXT("practice: a clear line of fire %.0f cells out (%.1f cells off)"), Cells, BestOff));
+			Practice.Aimed = Gun + ac::Vec2(std::cos(Best), std::sin(Best)) * Cells;
 			Pilot->Look(std::remainder(Best - Pilot->Yaw(), 2 * UE_DOUBLE_PI) / 0.0032, 0.0);
 			return;
 		}
@@ -671,21 +679,24 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 			if (!Settle(1.0)) return;
 			Practice.bAsked = true;
 			for (const ac::Structure& B : S->state.structures) Practice.DummyFrom = FMath::Max(Practice.DummyFrom, B.id + 1);
-			Check(Mmo->DevClock(FString::Printf(TEXT("dummy here %.0f"), DummyCells)), TEXT("practice: a Target Dummy asked for along the gun's aim (dev)"));
+			Check(Mmo->DevClock(FString::Printf(TEXT("dummy here %.0f"), Cells)), TEXT("practice: a Target Dummy asked for along the gun's aim (dev)"));
 			return;
 		}
+		// The one it asked for: newer than the ask (the demolish step's
+		// twelve still stand, one may sit behind another building), the
+		// nearest to where it was asked.
+		double Nearest = Cells * 0.5;
 		for (const ac::Structure& B : S->state.structures)
 		{
-			// The one it asked for: newer than the ask (the demolish step's
-			// twelve still stand, one may sit behind another building).
-			if (B.kind == ac::StructureKind::dummy && B.id != Practice.Built && B.id >= Practice.DummyFrom && B.complete() && B.hp > 0 && !B.downUntil)
+			if (B.kind == ac::StructureKind::dummy && B.id != Practice.Built && B.id >= Practice.DummyFrom && B.complete() && B.hp > 0 && !B.downUntil
+				&& ac::distance(B.position, Practice.Aimed) < Nearest)
 			{
-				const double Dist = ac::distance(B.position, Gun);
-				if (Dist > DummyCells * 0.6 && Dist < DummyCells * 1.5) Practice.Dummy = B.id;
+				Nearest = ac::distance(B.position, Practice.Aimed);
+				Practice.Dummy = B.id;
 			}
 		}
 		if (Practice.Dummy >= 0) Advance();
-		else Waited(FString::Printf(TEXT("practice: a standing Target Dummy %.0f cells out"), DummyCells), AskSeconds);
+		else Waited(FString::Printf(TEXT("practice: a standing Target Dummy %.0f cells out"), Cells), AskSeconds);
 		return;
 	}
 	case 16:
@@ -702,6 +713,36 @@ void UAcGameFlowSubsystem::TickMmoPracticeFlow(const FString& Step)
 		const ac::Vec2 Gun = ac::Defence::cornerGun(C->position, 0);
 		const ac::Vec2 To = D->position - Gun;
 		const double Yaw = std::atan2(To.y, To.x);
+		if (Practice.Ground == 0 && Practice.Settled < 0)
+		{
+			// The line checked before a round flies (C5: a grown building may
+			// stand between): within the gun's arc, and a round solved onto
+			// its plate lands on it. Else asked again, nearer or farther.
+			const ac::Vec3 Base(0, 0, S->groundZ(C->position));
+			const ac::Vec3 Level = ac::Defence::gunMuzzle(C->position, 0, Yaw, 0.0) + Base;
+			const double Plate = S->groundZ(D->position) + ac::Rules::height(D->kind) * 0.6;
+			const std::optional<double> Solve = ac::Rules::ballisticPitch(ac::length(D->position - ac::Vec2(Level.x, Level.y)), Plate - Level.z);
+			const bool bInArc = std::abs(std::remainder(ac::Defence::clampAim(0, Yaw) - Yaw, 2 * UE_DOUBLE_PI)) < 0.02;
+			const TOptional<ac::Vec3> Lands = Solve && bInArc
+				? AcPilotText::BallisticImpact(*S, ac::Defence::gunMuzzle(C->position, 0, Yaw, *Solve) + Base, ac::Rules::roundVelocity(Yaw, *Solve), C->id)
+				: TOptional<ac::Vec3>();
+			const bool bClear = Lands && ac::distance(ac::Vec2(Lands->x, Lands->y), D->position) < ac::Rules::radius(D->kind) + 1.0;
+			if (!bClear)
+			{
+				UE_LOG(LogAutocraft, Display, TEXT("flowtest: practice: the line to dummy #%lld (%.2f, %.2f) is %s; asked again"), (long long)D->id,
+					D->position.x, D->position.y, !bInArc ? TEXT("outside the gun's arc") : Lands ? TEXT("blocked") : TEXT("out of reach"));
+				if (++Practice.Tries >= 5)
+				{
+					Check(false, TEXT("practice: a dummy with a clear line from gun 1 (5 asks)"));
+					Finish();
+					return;
+				}
+				Practice.Dummy = -1;
+				T.Phase = 14;
+				Advance();
+				return;
+			}
+		}
 		Pilot->Look(std::remainder(Yaw - Pilot->Yaw(), 2 * UE_DOUBLE_PI) / 0.0032, 0.0);
 		// First a burst into the ground 2.5 cells short of the dummy: the
 		// impacts' plume, flash and sparks (c2-ground).
