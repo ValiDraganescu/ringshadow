@@ -103,7 +103,7 @@ What the regions needed (validated at 8.5):
 | Brine Pans | the pad "landing" (72, 48) to (71, 50): a cliff 8 cells north of it; the prize ring 4 to 6 out; the Gull tunnel's path ends 7.5 from the well |
 | Cold Fork | the prize ring 4 to 6 out, its north mound turned from -72° to -54° (the basin's north wall); the North tunnel's path ends 7.5 from the well |
 | Dust Terraces | the prize ring 4 to 6 out; the Dust tunnel's path ends 7.5 from the well |
-| Prospect Landing (start) | the Landing crate (70, 42) to (68, 40), off the plate; the spawn "start" (80, 53) to (82, 59), off the plate |
+| Prospect Landing (start) | the Landing crate (70, 42) to (88, 50): off the plate and within sight (12) of where a new pilot now starts, just off the plate toward the ore (c5-ship); the spawn "start" (80, 53) to (82, 59), off the plate |
 | the other six | nothing: their pads' ground is flat and clear 8.5 round |
 
 The prize rings: the 7x7 Derrick on the well (half side 3.5) stood on all
@@ -168,6 +168,14 @@ for 2x2). Until then both are 1.
   Mule. Before and after: `art/models/buildings/c5-size/`.
 
 ## Saved worlds
+
+A realm Citadel on load empties a mound under it for good (C1's schema-27
+step for Citadels grown in place). Since C5 that step asks placement's own
+test, the mound's middle or corners under the Citadel's square: before, it
+took the square and one cell more, so a Citadel placed by the rules beside a
+vein (9 cells from a mound's middle, the "Too close to resources" circle)
+emptied a mound at its diagonal on the next load.
+
 
 No migration (the manager's ruling): a saved building keeps its position
 and takes the new size on load, as C1's Citadel did. Where it now overlaps

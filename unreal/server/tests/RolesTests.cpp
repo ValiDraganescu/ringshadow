@@ -88,15 +88,32 @@ void fill(WorldMap& w, PilotId p, int64_t ore, int64_t mh) {
 /// plates, and finished at once by hand. Nil: no spot, or refused.
 std::optional<int64_t> put(WorldMap& w, PilotId p, StructureKind kind, std::string* why = nullptr) {
     Simulation& sim = simOf(w, p);
-    const Unit u = *drivenUnit(w, p);
     const auto& pads = first().regions[*w.where(p)].built.pads;
     const double reach = Region::buildReach(kind);
+    // No room round it (C5: the 7x7s and the 17x17 pad): beside the nearest
+    // open ground off the plates.
+    bool room = false;
+    for (int k = 0; k < 16 && !room; k++) {
+        const Vec2 at = drivenUnit(w, p)->position + Vec2(std::cos(k * 2 * pi / 16), std::sin(k * 2 * pi / 16)) * reach;
+        const auto spot = sim.snap(kind, at);
+        room = spot && !sim.placementRefusal(kind, *spot) && !region::touchesPadPlate(pads, *spot, Rules::radius(kind)) &&
+               !NavGrid::insideStructure(drivenUnit(w, p)->position, Structure(-1, kind, 0, *spot), Rules::radius(UnitKind::prospector));
+    }
+    if (!room)
+        if (const auto spot = rig::placeableNear(sim, pads, drivenUnit(w, p)->position, kind, 90)) {
+            drivenUnit(w, p)->position = rig::weldStand(kind, *spot);
+            w.step();
+        }
+    const Unit u = *drivenUnit(w, p);
     for (double d = reach; d <= reach + Region::buildSlack; d += 0.5)
         for (int k = 0; k < 16; k++) {
             const double h = k * 2 * pi / 16;
             const auto spot = sim.snap(kind, u.position + Vec2(std::cos(h), std::sin(h)) * d);
+            // Not over the Prospector: a big square's corner reaches inside
+            // the ring (C5: the 17x17 pad at 45 degrees).
             if (!spot || distance(*spot, u.position) > reach + Region::buildSlack || sim.placementRefusal(kind, *spot) ||
-                region::touchesPadPlate(pads, *spot, Rules::radius(kind)))
+                region::touchesPadPlate(pads, *spot, Rules::radius(kind)) ||
+                NavGrid::insideStructure(u.position, Structure(-1, kind, 0, *spot), Rules::radius(UnitKind::prospector)))
                 continue;
             const int64_t id = sim.state.nextID;
             if (const auto no = w.build(p, kind, *spot)) {
@@ -177,7 +194,9 @@ TEST(roles_respawn_at_the_citadel) {
     EXPECT_TRUE(!n.respawning(me)->home.has_value());
     wait(n, me, 10.1);
     ASSERT_TRUE(drivenUnit(n, me) != nullptr);
-    EXPECT_TRUE(distance(drivenUnit(n, me)->position, startPad()) < 3);
+    // Just off its plate (C5: where a new pilot starts).
+    const double off = distance(drivenUnit(n, me)->position, startPad());
+    EXPECT_TRUE(off > region::padReach && off < region::padReach + 4.5);
 }
 
 // Second wind rank 3: back 75% sooner (2.5 s) with 75% of the cargo.

@@ -207,7 +207,8 @@ TEST(world_pilot_starts_at_the_pad_in_a_prospector_with_600_ore) {
     EXPECT_TRUE(u->kind == UnitKind::prospector);
     EXPECT_EQ(u->owner, Pilot::player);
     const Vec2 pad = first().regions[first().start].built.pads[first().startPad].at;
-    EXPECT_TRUE(distance(u->position, pad) < 1.0);
+    // Just off its plate toward the ore (C5: the 17x17 pad).
+    EXPECT_TRUE(distance(u->position, pad) > region::padReach && distance(u->position, pad) < region::padReach + 4.5);
     EXPECT_EQ(w.wallet(me)->ore, int64_t(600));
     EXPECT_EQ(w.wallet(me)->hydrogen, int64_t(0));
     EXPECT_EQ(w.start().simulation().state.players[0].ore, int64_t(600));

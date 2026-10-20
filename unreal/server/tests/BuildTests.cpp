@@ -131,7 +131,7 @@ TEST(build_a_citadel_paid_from_the_wallet) {
 TEST(build_refused_when_too_poor) {
     WorldMap w(firstWorld(), blueprinted());
     ASSERT_TRUE(w.join(me));
-    put(w, me, Vec2(72, 48), west);
+    putHome(w, me);
     w.regionOf(me)->simulation().state.players[0].ore = 399;
     const auto why = w.build(me, StructureKind::citadel, spot(w, me, StructureKind::citadel));
     ASSERT_TRUE(why.has_value());
@@ -148,10 +148,28 @@ TEST(build_refused_on_a_blocked_spot) {
     put(w, me, Vec2(58.5, 50), west);
     auto why = w.build(me, StructureKind::citadel, spot(w, me, StructureKind::citadel));
     ASSERT_TRUE(why.has_value());
-    // A Citadel by the ore: too close to it (C1: the 12x12's band, r + 3 from
-    // the ore, is x 71 to 72.5 here; on the mounds below 71, placed from 73).
-    put(w, me, Vec2(71.5, 50), west);
-    why = w.build(me, StructureKind::citadel, spot(w, me, StructureKind::citadel));
+    // A Citadel by the ore: too close to it (C1: the 12x12's band, r + 3
+    // from the ore). C5: east of the vein that band is on the start pad's
+    // plate now, so the first spot round the vein in the band and off the
+    // plate, the Prospector its reach east of it.
+    {
+        const auto& pads = firstWorld().regions[*w.where(me)].built.pads;
+        const Vec2 vein = w.regionOf(me)->places()->ground(Vec2(52, 51));
+        std::optional<Vec2> near;
+        for (double d = 6; d <= 16 && !near; d += 0.5)
+            for (int k = 0; k < 48 && !near; k++) {
+                const auto at = sim.snap(StructureKind::citadel, vein + Vec2(std::cos(k * pi / 24), std::sin(k * pi / 24)) * d);
+                if (at && sim.placementRefusal(StructureKind::citadel, *at) == std::optional<std::string>("Too close to resources") &&
+                    !region::touchesPadPlate(pads, *at, Rules::radius(StructureKind::citadel)))
+                    near = at;
+            }
+        ASSERT_TRUE(near.has_value());
+        Unit* u = driven(w, me);
+        u->position = *near + Vec2(Region::buildReach(StructureKind::citadel), 0);
+        u->heading = west;
+        u->task = Unit::Task::idle;
+        why = w.build(me, StructureKind::citadel, *near);
+    }
     ASSERT_TRUE(why.has_value());
     if (*why != "Too close to resources") std::printf("  refused: %s\n", why->c_str());
     EXPECT_TRUE(*why == "Too close to resources");
@@ -247,24 +265,33 @@ TEST(build_refused_touching_a_pad_plate) {
     ASSERT_TRUE(!firstWorld().regions.empty());
     // On the start pad, facing east (away from the ore).
     put(w, me, Vec2(76, 48), 0);
-    // The nearest snapped spot east that touches the plate, and the first clear one.
+    // The nearest snapped spot out from the pad that touches the plate, and
+    // the first clear one (C1: the Citadel is 12x12, so the spots run
+    // farther out; C5: east first, else the first way round whose clear
+    // spot places: 8.5 out, the plate's edge reaches the veins and rocks).
     std::optional<Vec2> touching, clear;
-    // (C1: the Citadel is 12x12, so the spots run farther out.)
-    for (double d = 4.0; d < region::padReach + 12; d += 0.25) {
-        const Vec2 at = *sim.snap(StructureKind::citadel, pad + Vec2(d, 0));
-        const double edge = std::abs(at.x - pad.x) - Rules::radius(StructureKind::citadel);
-        if (edge < region::padReach) touching = at;
-        else if (!clear) clear = at;
+    const auto& plates = firstWorld().regions[*w.where(me)].built.pads;
+    for (int k = 0; k < 24; k++) {
+        const Vec2 way(std::cos(k * pi / 12), std::sin(k * pi / 12));
+        touching = clear = std::nullopt;
+        for (double d = 4.0; d < region::padReach + 12; d += 0.25) {
+            const Vec2 at = *sim.snap(StructureKind::citadel, pad + way * d);
+            if (region::touchesPadPlate(plates, at, Rules::radius(StructureKind::citadel))) touching = at;
+            else if (!clear) clear = at;
+        }
+        if (touching && clear && !sim.placementRefusal(StructureKind::citadel, *clear)) break;
     }
     ASSERT_TRUE(touching.has_value() && clear.has_value());
-    EXPECT_TRUE(std::abs(clear->x - touching->x) <= 1.0 + 1e-9);
+    EXPECT_TRUE(distance(*clear, *touching) <= 1.0 + 1e-9);
     auto why = w.build(me, StructureKind::citadel, *touching);
     ASSERT_TRUE(why.has_value());
     EXPECT_TRUE(*why == region::padPlateRefusal);
     if (*why != region::padPlateRefusal) std::printf("  refused: %s\n", why->c_str());
     EXPECT_TRUE(sim.state.structures.empty());
     EXPECT_EQ(w.wallet(me)->ore, int64_t(600));
-    // Just outside the plate it goes up.
+    // Just outside the plate it goes up (C5: the plate 8.5 round, the
+    // Prospector stepped up within its reach).
+    driven(w, me)->position = *clear + normalize(pad - *clear) * Region::buildReach(StructureKind::citadel);
     why = w.build(me, StructureKind::citadel, *clear);
     if (why) std::printf("  refused: %s\n", why->c_str());
     EXPECT_TRUE(!why.has_value());

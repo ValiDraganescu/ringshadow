@@ -91,7 +91,7 @@
     {"name": "start", "at": [82, 59]}
   ],
   "sites": [
-    {"name": "Landing crate", "kind": "crate", "at": [68, 40], "blueprint": "citadel"},
+    {"name": "Landing crate", "kind": "crate", "at": [88, 50], "blueprint": "citadel"},
     {"name": "Lander wreck", "kind": "wreck", "at": [50, 30], "blueprint": "derrick"}
   ],
   "openings": {

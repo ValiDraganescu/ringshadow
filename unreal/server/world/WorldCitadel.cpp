@@ -89,10 +89,21 @@ std::vector<std::string> WorldMap::adoptCitadels(size_t r) {
     for (const Structure& c : st.structures) {
         if (c.kind != StructureKind::citadel || !realm(c)) continue;
         const std::string citadel = "citadel " + std::to_string(c.id) + " in " + region;
-        // Its ore: emptied for good, as a mound under a building.
+        // Its ore: emptied for good, as a mound under a building: one whose
+        // middle or corners lie under its square (placement's own test, so a
+        // Citadel placed by the rules never empties a mound beside it; C5).
+        const double side = Rules::radius(StructureKind::citadel);
+        auto under = [&](const OreDeposit& d) {
+            const double ca = std::cos(d.angle), sa = std::sin(d.angle);
+            for (const auto& [lx, lz] : {std::pair{0.0, 0.0}, {1.0, 0.5}, {1.0, -0.5}, {-1.0, 0.5}, {-1.0, -0.5}}) {
+                const Vec2 q = d.position + Vec2(lx * ca + lz * sa, -lx * sa + lz * ca);
+                if (std::abs(q.x - c.position.x) < side + 0.1 && std::abs(q.y - c.position.y) < side + 0.1) return true;
+            }
+            return false;
+        };
         for (size_t k = 0; k < st.patches.size(); k++) {
             OreDeposit& d = st.patches[k];
-            if (!in(c, d.position, 0) || (d.initial == 0 && d.remaining == 0)) continue;
+            if (!under(d) || (d.initial == 0 && d.remaining == 0)) continue;
             said.push_back("schema 27: " + citadel + " grown over deposit " + std::to_string(k) + " at " + where(d.position) +
                            ", " + std::to_string(d.remaining) + " ore: emptied");
             d.initial = 0;

@@ -95,7 +95,8 @@ std::optional<int64_t> put(WorldMap& w, PilotId p, StructureKind kind, std::stri
     for (int k = 0; k < 16 && !room; k++) {
         const Vec2 at = drivenUnit(w, p)->position + Vec2(std::cos(k * 2 * pi / 16), std::sin(k * 2 * pi / 16)) * reach;
         const auto spot = sim.snap(kind, at);
-        room = spot && !sim.placementRefusal(kind, *spot) && !region::touchesPadPlate(pads, *spot, Rules::radius(kind));
+        room = spot && !sim.placementRefusal(kind, *spot) && !region::touchesPadPlate(pads, *spot, Rules::radius(kind)) &&
+               !NavGrid::insideStructure(drivenUnit(w, p)->position, Structure(-1, kind, 0, *spot), Rules::radius(UnitKind::prospector));
     }
     if (!room)
         if (const auto spot = rig::placeableNear(sim, pads, drivenUnit(w, p)->position, kind)) {
@@ -107,8 +108,11 @@ std::optional<int64_t> put(WorldMap& w, PilotId p, StructureKind kind, std::stri
         for (int k = 0; k < 16; k++) {
             const double h = k * 2 * pi / 16;
             const auto spot = sim.snap(kind, u.position + Vec2(std::cos(h), std::sin(h)) * d);
+            // Not over the Prospector: a big square's corner reaches inside
+            // the ring (C5: the 17x17 pad at 45 degrees).
             if (!spot || distance(*spot, u.position) > reach + Region::buildSlack || sim.placementRefusal(kind, *spot) ||
-                region::touchesPadPlate(pads, *spot, Rules::radius(kind)))
+                region::touchesPadPlate(pads, *spot, Rules::radius(kind)) ||
+                NavGrid::insideStructure(u.position, Structure(-1, kind, 0, *spot), Rules::radius(UnitKind::prospector)))
                 continue;
             const int64_t id = sim.state.nextID;
             if (const auto no = w.build(p, kind, *spot)) {
@@ -376,9 +380,11 @@ TEST(rig_survey_lens_in_the_sim) {
 // jobs), and a v6 file opens as v8 with no rig.
 TEST(rig_save_round_trip) {
     WorldMap w(first(), params());
-    home(w);
+    const int64_t citadel = home(w);
     ASSERT_TRUE(put(w, me, StructureKind::foundry).has_value());
     ASSERT_TRUE(put(w, me, StructureKind::lab).has_value());
+    // Back home to fit (C5: the 7x7 Foundry and the Lab went up farther off).
+    besides(w, me, citadel);
     edit(w, me, [](Rig& r) {
         r.store(Module::torchTip, 1, 2);
         r.store(Module::surveyLens, 1);

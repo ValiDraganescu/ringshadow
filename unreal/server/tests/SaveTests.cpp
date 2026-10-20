@@ -509,7 +509,9 @@ TEST(save_unknown_id_is_a_new_pilot_at_the_pad) {
     EXPECT_EQ(again.wallet(30)->ore, int64_t(600));
     EXPECT_EQ(again.start().simulation().state.units.size(), before + 1);
     const region::Place& pad = firstWorld().regions[firstWorld().start].built.pads[firstWorld().startPad];
-    EXPECT_TRUE(distance(driven(again, 30)->position, pad.at) < 3);
+    // Just off its plate (C5: where a new pilot starts).
+    EXPECT_TRUE(distance(driven(again, 30)->position, pad.at) > region::padReach &&
+                distance(driven(again, 30)->position, pad.at) < region::padReach + 4.5);
     // The known one is still waiting, apart.
     EXPECT_EQ(again.away(), size_t(1));
     EXPECT_TRUE(again.save().pilots.size() == 2);
