@@ -105,3 +105,33 @@ TEST(playground_labGoesOnItsHost) {
     EXPECT_TRUE(sim.labRefusal(*sim.state.structure(g)) == std::optional<std::string>("It has a Lab"));
     EXPECT_TRUE(!sim.placeLab(g).has_value());
 }
+
+/// C5 (docs/building-sizes.md, "Saved worlds"): a Citadel keeps its square
+/// grown by 3 clear of ore, not a circle: a mound in the circle's corner
+/// gap (7.2 off its middle each way, 10.2 away) is refused, and no spot round
+/// a mound where the Citadel places covers it (the shape the loads empty a
+/// mound by, `Simulation::coversMound`). Every other kind: placed means not
+/// covering.
+TEST(playground_aCitadelKeepsItsSquareClearOfOre) {
+    const simtest::CitadelHall hall(true);
+    Simulation sim = fresh();
+    const Vec2 ore(0, 0);
+    sim.placePatch(ore, 0);
+    const OreDeposit mound = sim.state.patches.back();
+    const double r = Rules::radius(Structure::Kind::citadel);
+    // Off the mound's square (its 2x1 along x) and out of the old circle,
+    // in the square grown by 3.
+    const Vec2 corner = ore - Vec2(7.2, 7.2);
+    EXPECT_TRUE(distance(corner, ore) > r + 3);
+    EXPECT_TRUE(!Simulation::coversMound(Structure::Kind::citadel, corner, mound));
+    EXPECT_TRUE(sim.placementRefusal(Structure::Kind::citadel, corner) == std::optional<std::string>("Too close to resources"));
+    EXPECT_TRUE(sim.placementRefusal(Structure::Kind::citadel, ore - Vec2(r + 3.5, r + 3.5)) == std::nullopt);
+    for (const Structure::Kind kind : {Structure::Kind::citadel, Structure::Kind::habDome, Structure::Kind::foundry, Structure::Kind::lab,
+                                       Structure::Kind::spacedock, Structure::Kind::landingPad})
+        for (double x = -14; x <= 14; x += 0.5)
+            for (double y = -14; y <= 14; y += 0.5) {
+                const auto at = sim.snap(kind, ore + Vec2(x, y));
+                if (!at || sim.placementRefusal(kind, *at)) continue;
+                EXPECT_TRUE(!Simulation::coversMound(kind, *at, mound));
+            }
+}

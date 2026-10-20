@@ -233,6 +233,12 @@ public:
     /// Why a `kind` cannot stand at `p` (the ground, or something in the
     /// way), or nil when it can.
     std::optional<std::string> placementRefusal(Structure::Kind kind, Vec2 p) const;
+    /// A `kind` at `p` covers mound `m`: the mound's middle or a corner of
+    /// its 2x1 under the footprint's square grown by 0.1. The one shape
+    /// placement refuses ore by and the loads empty a mound under a
+    /// building by (`WorldMap::adoptCitadels`, the save's restore; C5), so
+    /// a building placed by the rules never empties a mound.
+    static bool coversMound(Structure::Kind kind, Vec2 p, const OreDeposit& m);
 
     /// The driven Prospector puts up a `kind` at `p`: paid now, and it welds it
     /// until done or until it walks off. Returns why not, or nil when it

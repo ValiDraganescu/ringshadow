@@ -104,6 +104,11 @@ const Structure* structure(const Simulation& sim, int64_t id) {
 /// and welded to the end. Nil: refused, or not finished.
 std::optional<int64_t> weld(WorldMap& w, PilotId p, StructureKind kind, Vec2 stand) {
     Simulation& sim = simOf(w, p);
+    // Its spot refused (C5: the bigger buildings and the Citadel's square
+    // band move what stands round it): the nearest the core takes.
+    if (const auto first = sim.snap(kind, stand + Vec2(-1, 0) * Region::buildReach(kind));
+        kind != StructureKind::citadel && first && sim.placementRefusal(kind, *first))
+        stand = rig::standFor(w, p, kind, stand);
     Unit* u = drivenUnit(w, p);
     u->task = Unit::Task::idle;
     u->position = stand;

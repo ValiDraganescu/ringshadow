@@ -57,7 +57,9 @@ On the start region, of 289 spots that take the 5x5 every 4 cells, 144 take
 the 12x12: the rest have a rock, a cliff or a deposit under the bigger
 square (3 a ridge's bend). The "Too close to resources" band keeps 3 cells
 from the Citadel's edge to the ore and 3.5 to a well (`r + 3`, `r + 3.5`:
-5.5 and 6 for the 5x5 as before).
+5.5 and 6 for the 5x5 as before); since C5 its square grown by those, not
+a circle, the shape the loads empty a mound by
+([building-sizes.md](building-sizes.md), "Saved worlds").
 
 ## 2. The footprint has a shape (core)
 

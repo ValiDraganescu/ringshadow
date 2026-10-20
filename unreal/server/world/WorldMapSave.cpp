@@ -573,11 +573,13 @@ void WorldMap::adopt(size_t r, const SavedRegion& sr) {
         for (const SavedDeposit& d : sr.deposits)
             if (d.index >= 0 && size_t(d.index) < own) put(size_t(d.index), d);
     }
-    // A mound the new layout puts under a building: empty, for good.
+    // A mound the new layout puts under a building: empty, for good. Under
+    // by the one shape placement refuses ore by (`Simulation::coversMound`,
+    // C5: a circle r + 1 here reached past placement's square at the sides).
     for (size_t k = 0; k < own; k++) {
         OreDeposit& d = st.patches[k];
         for (const Structure& b : st.structures)
-            if (distance(b.position, d.position) < Rules::radius(b.kind) + 1.0) {
+            if (Simulation::coversMound(b.kind, b.position, d)) {
                 d.initial = 0;
                 d.remaining = 0;
                 d.depletedAt = std::nullopt;

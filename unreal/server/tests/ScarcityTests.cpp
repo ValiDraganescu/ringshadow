@@ -262,8 +262,13 @@ TEST(scarcity_an_old_save_adopts_the_new_veins) {
     EXPECT_EQ(st.structures.size(), size_t(3));
     ASSERT_TRUE(st.patches.size() == file.deposits.size());
     for (size_t k = 0; k < st.patches.size(); k++) {
-        if (k == 0) {
-            // Under the Hab Dome: empty, for good.
+        // Under a building (the Hab Dome on mound 0; C5: 5x5, it covers its
+        // neighbours in the vein too, by placement's own shape): empty, for
+        // good; the rest full.
+        bool under = false;
+        for (const Structure& b : st.structures) under = under || Simulation::coversMound(b.kind, b.position, st.patches[k]);
+        if (k == 0) EXPECT_TRUE(under);
+        if (under) {
             EXPECT_EQ(st.patches[k].remaining, int64_t(0));
             EXPECT_EQ(st.patches[k].initial, int64_t(0));
         } else {

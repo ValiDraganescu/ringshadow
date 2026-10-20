@@ -1312,14 +1312,7 @@ std::optional<std::string> Simulation::placementRefusal(Structure::Kind kind, Ve
     }
     for (const OreDeposit& m : state.patches) {
         if (!(m.remaining > 0)) continue;
-        // A field is 2x1: its corners and centre against the footprint.
-        const double c = std::cos(m.angle), s = std::sin(m.angle);
-        constexpr std::array<std::pair<double, double>, 5> corners{
-            {{0.0, 0.0}, {1, 0.5}, {1, -0.5}, {-1, 0.5}, {-1, -0.5}}};
-        for (const auto& [lx, lz] : corners) {
-            const Vec2 q = m.position + Vec2(lx * c + lz * s, -lx * s + lz * c);
-            if (std::abs(q.x - p.x) < r + 0.1 && std::abs(q.y - p.y) < r + 0.1) return "Something is in the way";
-        }
+        if (coversMound(kind, p, m)) return "Something is in the way";
     }
     if (state.wells) {
         for (const Well& g : *state.wells) {
@@ -1328,16 +1321,31 @@ std::optional<std::string> Simulation::placementRefusal(Structure::Kind kind, Ve
             }
         }
     }
-    // A Citadel keeps 3 cells from its edge to the ore and 3.5 to a well
-    // (5.5 and 6 from the 5x5's centre; the 12x12's follow its side, C1).
+    // A Citadel keeps 3 cells from its edge to the ore's middle and 3.5 to
+    // a well (C1: the 12x12's follow its side). C5: its square grown by
+    // that, the shape the loads empty mounds by, not a circle (a mound in
+    // the circle's corner gap was placeable and emptied on the next load).
+    const auto inBand = [&](Vec2 q, double band) { return std::abs(q.x - p.x) < r + band && std::abs(q.y - p.y) < r + band; };
     if (kind == Structure::Kind::citadel
         && (std::any_of(state.patches.begin(), state.patches.end(),
-                        [&](const OreDeposit& m) { return m.remaining > 0 && distance(m.position, p) < r + 3; })
+                        [&](const OreDeposit& m) { return m.remaining > 0 && inBand(m.position, 3); })
             || (state.wells && std::any_of(state.wells->begin(), state.wells->end(),
-                                           [&](const Well& w) { return distance(w.position, p) < r + 3.5; })))) {
+                                           [&](const Well& w) { return inBand(w.position, 3.5); })))) {
         return "Too close to resources";
     }
     return std::nullopt;
+}
+
+bool Simulation::coversMound(Structure::Kind kind, Vec2 p, const OreDeposit& m) {
+    // A field is 2x1: its corners and centre against the footprint.
+    const double r = Rules::radius(kind);
+    const double c = std::cos(m.angle), s = std::sin(m.angle);
+    constexpr std::array<std::pair<double, double>, 5> corners{{{0.0, 0.0}, {1, 0.5}, {1, -0.5}, {-1, 0.5}, {-1, -0.5}}};
+    for (const auto& [lx, lz] : corners) {
+        const Vec2 q = m.position + Vec2(lx * c + lz * s, -lx * s + lz * c);
+        if (std::abs(q.x - p.x) < r + 0.1 && std::abs(q.y - p.y) < r + 0.1) return true;
+    }
+    return false;
 }
 
 /// The driven Prospector puts up a `kind` at `p`: paid now, and it welds it

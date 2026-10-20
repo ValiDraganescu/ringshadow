@@ -169,12 +169,23 @@ for 2x2). Until then both are 1.
 
 ## Saved worlds
 
-A realm Citadel on load empties a mound under it for good (C1's schema-27
-step for Citadels grown in place). Since C5 that step asks placement's own
-test, the mound's middle or corners under the Citadel's square: before, it
-took the square and one cell more, so a Citadel placed by the rules beside a
-vein (9 cells from a mound's middle, the "Too close to resources" circle)
-emptied a mound at its diagonal on the next load.
+Placement and the loads now share one shape (`Simulation::coversMound`):
+a mound is under a building when its middle or a corner of its 2x1 lies
+in the building's square grown by 0.1. Placement refuses ore by it
+("Something is in the way"); a realm Citadel's load step for Citadels grown
+in place (C1's schema 27, `adoptCitadels`, every restore) and the save's
+restore (a mound the layout puts under any building) empty a mound for good
+only by it. Before C5 the loads took the square and one cell more (the
+Citadel's) or a circle the radius and one more (any building), and the
+Citadel's "Too close to resources" band was a circle (r + 3 to a mound's
+middle): a Citadel placed by the rules could have a mound in the circle's
+corner gap at its diagonal, emptied on the next load (c5-ship found one
+9.3 off). The band is now the Citadel's square grown by 3 to a mound's
+middle and by 3.5 to a well; a building placed by the rules never covers a
+mound. The Derrick goes on a well whatever is round it (no world region's
+7x7 Derrick covers ore, `BuildingSizesTests`). Tests: core
+`playground_aCitadelKeepsItsSquareClearOfOre`, server
+`save_citadel_beside_a_mound_keeps_its_ore`.
 
 
 No migration (the manager's ruling): a saved building keeps its position

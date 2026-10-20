@@ -431,6 +431,54 @@ TEST(save_restart_restores_the_region_exactly) {
     EXPECT_TRUE(again.save() == w.save());
 }
 
+// C5: a Citadel placed by the rules as close to a mound as they let it
+// (its corner toward the mound), saved and put back: every mound keeps its
+// ore. The load's step for Citadels grown in place (adoptCitadels) empties
+// only a mound the footprint covers, by placement's own test; before, a
+// mound in the corner gap of placement's circle was emptied for good.
+TEST(save_citadel_beside_a_mound_keeps_its_ore) {
+    constexpr PilotId me = 7;
+    WorldMap w(firstWorld(), blueprinted());
+    ASSERT_TRUE(w.seat(me, keyA) == WorldMap::Seated::fresh);
+    Simulation& sim = w.regionOf(me)->simulation();
+    const auto& pads = firstWorld().regions[*w.where(me)].built.pads;
+    const double r = Rules::radius(StructureKind::citadel);
+    // The legal spot nearest a mound on a diagonal, over every mound.
+    std::optional<Vec2> best;
+    double bestGap = 1e9;
+    for (const OreDeposit& m : sim.state.patches) {
+        if (!(m.remaining > 0)) continue;
+        for (const Vec2 sign : {Vec2(1, 1), Vec2(1, -1), Vec2(-1, 1), Vec2(-1, -1)})
+            for (double a = r; a <= r + 6; a += 0.5)
+                for (double b = r; b <= r + 6; b += 0.5) {
+                    const auto at = sim.snap(StructureKind::citadel, m.position + Vec2(sign.x * a, sign.y * b));
+                    if (!at || sim.placementRefusal(StructureKind::citadel, *at) ||
+                        region::touchesPadPlate(pads, *at, r))
+                        continue;
+                    const double gap = std::max(std::abs(at->x - m.position.x), std::abs(at->y - m.position.y));
+                    if (gap < bestGap) {
+                        bestGap = gap;
+                        best = at;
+                    }
+                }
+    }
+    ASSERT_TRUE(best.has_value());
+    std::printf("  a Citadel %.1f off a mound's middle (its square + 3 is %.1f)\n", bestGap, r + 3);
+    Unit* u = driven(w, me);
+    u->position = *best + Vec2(Region::buildReach(StructureKind::citadel), 0);
+    u->heading = 3.141592653589793;
+    u->task = Unit::Task::idle;
+    ASSERT_TRUE(!w.build(me, StructureKind::citadel, *best));
+    w.step();
+    const std::vector<OreDeposit> was = sim.state.patches;
+    w.leave(me);
+    WorldMap again(firstWorld());
+    EXPECT_TRUE(again.restore(w.save()).empty());
+    const std::vector<OreDeposit>& now = again.start().simulation().state.patches;
+    ASSERT_TRUE(now.size() == was.size());
+    for (size_t k = 0; k < was.size(); k++) EXPECT_EQ(now[k].remaining, was[k].remaining);
+}
+
 TEST(save_pilot_restored_by_id_where_it_left) {
     constexpr PilotId me = 7;
     WorldParams fuel = blueprinted();

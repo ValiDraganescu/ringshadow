@@ -456,18 +456,24 @@ TEST(load_schema27ClearsTheGrownFootprint) {
     for (const std::string& l : lines) {
         std::printf("  %s\n", l.c_str());
         if (l.rfind("schema 27: ", 0) != 0) continue;
-        // (Deposit 0, 4.5 cells off, is emptied by the old rule already: a
-        // mound under a building; the grown square takes those beyond it.)
+        // (C5: the save's restore and this step take one shape, a mound
+        // covered by the footprint, so the restore has emptied them first and
+        // this step has none left to tell; checked on the ground below.)
         deposit = deposit || (l.find("citadel 500") != std::string::npos && l.find(" deposit ") != std::string::npos);
         swallowed = swallowed || (l.find("citadel 501") != std::string::npos && l.find("site " + start.built.sites[far].name) != std::string::npos);
         dome = dome || (l.find("citadel 500") != std::string::npos && l.find("Hab Dome 502") != std::string::npos && l.find(": left") != std::string::npos);
     }
-    EXPECT_TRUE(deposit);
+    (void)deposit;
     EXPECT_TRUE(swallowed);
     EXPECT_TRUE(dome);
     const GameState& st = w.start().simulation().state;
     EXPECT_EQ(st.patches[0].remaining, int64_t(0));
     EXPECT_EQ(st.patches[0].initial, int64_t(0));
+    // Every mound the grown Citadel covers: empty, for good.
+    for (const Structure& c : st.structures)
+        if (c.id == 500)
+            for (const OreDeposit& d : st.patches)
+                if (Simulation::coversMound(c.kind, c.position, d)) EXPECT_EQ(d.remaining, int64_t(0));
     EXPECT_TRUE(w.siteSwallowed(first().start, far));
     // A site away from both stays.
     for (size_t i = 0; i < start.built.sites.size(); i++) {
