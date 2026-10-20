@@ -483,11 +483,13 @@ TEST(e2e_save_kill_9_mid_play_loses_at_most_5_s) {
     // off the pad's plate, room for one by it), whichever way fits.
     c.until([] { return false; }, 0.5);
     bool built = false;
-    for (int k = 0; k < 16 && !built; k++) {
-        hc.steer.heading = k * 6.283185307179586 / 16;
+    // (32 ways, half a cell apart out: the Citadel's square band to the ore
+    // leaves its spots by the start sparse, C5.)
+    for (int k = 0; k < 32 && !built; k++) {
+        hc.steer.heading = k * 6.283185307179586 / 32;
         c.until([] { return false; }, 0.4);
         // Out to the build's slack ahead (the unit moves on as it is asked).
-        for (double more = 0; more <= Region::buildSlack - 0.5 && !built; more += 1) {
+        for (double more = 0; more <= Region::buildSlack - 0.5 && !built; more += 0.5) {
             const Unit& u = *hc.mirror()->unit(*hc.mirror()->driven());
             const Vec2 ahead(std::cos(u.heading), std::sin(u.heading));
             const auto at = hc.mirror()->simulation().snap(StructureKind::citadel,
